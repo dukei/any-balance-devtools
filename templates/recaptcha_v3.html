@@ -1,0 +1,102 @@
+﻿<html>
+<head>
+    <title>reCAPTCHA</title>
+    <meta charset="utf-8" />
+    <script src="https://www.google.com/recaptcha/api.js?render=%SITEKEY%"></script>
+	<script>
+	  	grecaptcha.ready(function() {
+	  	    const action = '%ACTION%';
+	  	    if(action) {
+                grecaptcha.execute('%SITEKEY%', {action: '%ACTION%'}).then(function (token) {
+                    callbackRecaptcha(token)
+                });
+            }else{
+                grecaptcha.execute('%SITEKEY%').then(function (token) {
+                    callbackRecaptcha(token)
+                });
+            }
+	  	});
+	  
+        function log(color, text) {
+    		document.getElementById('err').innerHTML += '<div style="color:' + color + '"><small>' + new Date() + '</small>: ' + text + '</div>';
+        }
+        
+    	window.onerror = function(errorMsg, url, lineNumber){
+    		log('brown', errorMsg + ' Script: ' + url + ' Line: ' + lineNumber);
+    	}
+    	
+        var timeLimit = %TIMELIMIT%;
+        var startTime = +new Date();
+        function callbackRecaptcha(response){
+            log('black', 'Sending response: ' + response);
+            abdt_onRecaptchaEvent('solved', response);
+        }
+        function callbackTimeout(){
+            log('red', 'Timeout :(');
+            abdt_onRecaptchaEvent('timeout');
+        }
+        function tick(){
+            var elapsedTime = +new Date() - startTime;
+            var leftTime = Math.floor((timeLimit - elapsedTime)/1000);
+            if(leftTime <= 0){
+                callbackTimeout();
+                clearInterval(g_interval);
+                leftTime = 0;
+            }
+            
+            document.getElementById('timer').innerHTML = formatTime(leftTime);
+        }
+
+        function formatTime(time){
+            // Minutes and seconds
+            var mins = ~~(time / 60);
+            var secs = time % 60;
+
+            // Hours, minutes and seconds
+            var hrs = ~~(time / 3600);
+            var mins = ~~((time % 3600) / 60);
+            var secs = time % 60;
+
+            // Output like "1:01" or "4:03:59" or "123:03:59"
+            var ret = "";
+
+            if (hrs > 0) {
+                ret += "" + hrs + ":" + (mins < 10 ? "0" : "");
+            }
+
+            ret += "" + mins + ":" + (secs < 10 ? "0" : "");
+            ret += "" + secs;
+            return ret;
+        }
+
+        var g_interval = setInterval(tick, 500);
+        setTimeout(tick, 0);
+    </script>
+    <style>
+        .g-recaptcha{
+           margin: 15px auto !important;
+           width: auto !important;
+           height: auto !important;
+           text-align: -webkit-center;
+           text-align: -moz-center;
+           text-align: -o-center;
+           text-align: -ms-center;
+        }
+        #timer {
+            color: brown;
+        }
+        p {
+            text-align: center;
+        }
+        #err {
+        	padding: 10px;
+        }
+    </style>
+</head>
+<body>
+<p>%TEXT%</p>
+<p><span id="timer"></span></p>
+<div>Validating ReCAPTCHA v3...</div>
+<div id="err"></div>
+</body>
+</html>
