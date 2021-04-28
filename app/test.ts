@@ -1,7 +1,7 @@
 
 import log from "../common/log";
-import {BrowserManager} from "../browser/BrowserManager";
-import {PageHelper} from "../browser/PageHelper";
+import {BrowserManager} from "./browser/BrowserManager";
+import {PageHelper} from "./browser/PageHelper";
 
 
 (async () => {

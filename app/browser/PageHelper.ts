@@ -1,6 +1,7 @@
 import {BrowserManager} from "./BrowserManager";
 import * as fs from "fs";
 import * as path from "path";
+import config from "../config/config_development";
 
 export interface CodeBaseOptions {
     prompt?: string,
@@ -31,7 +32,11 @@ export class PageHelper {
 
     public static async solveRecaptchaEx(options: RecaptchaOptions|RecaptchaV3Options, type: 'v2'|'v3'): Promise<string>{
         const bm = await BrowserManager.getInstance();
-        const page = await bm.newPage({headless: false, proxy: options.proxy});
+        const page = await bm.newPage({
+            headless: false,
+            proxy: options.proxy,
+            userDataDir: config.browser.persistentProfile
+        });
 
         await page.setRequestInterception(true);
         if(options.userAgent)
@@ -79,8 +84,14 @@ export class PageHelper {
         try {
             return await waitingForSolution;
         }finally{
-            if(!page.isClosed())
-                page.close({runBeforeUnload: false});
+            if(config.browser.leaveCaptchaWindowAfterSolution
+                || (config.browser.leaveRecaptchaV2 && type === 'v2')
+                || (config.browser.leaveRecaptchaV3 && type === 'v3')) {
+                //Manual closing
+            }else{
+                if (!page.isClosed())
+                    page.close({runBeforeUnload: false});
+            }
         }
     }
 }

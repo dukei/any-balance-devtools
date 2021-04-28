@@ -1,5 +1,5 @@
 import puppeteer, {Browser, BrowserContext, Page} from "puppeteer";
-import log from "../common/log";
+import log from "../../common/log";
 
 type SpecificBrowser = {
     key: string
@@ -11,7 +11,8 @@ export type BrowserArgs = {
     incognito?: boolean,
     proxy?: string,
     headless?: boolean,
-    userAgent?: string
+    userAgent?: string,
+    userDataDir?: string
 }
 
 export class BrowserManager {
@@ -36,6 +37,7 @@ export class BrowserManager {
             const br = await puppeteer.launch({
                 args: args.proxy ? [ `--proxy-server=${args.proxy}` ] : undefined,
                 headless: headless,
+                userDataDir: args.userDataDir
             });
             this.browsers[key] = b = {
                 key: key,
