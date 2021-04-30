@@ -15,7 +15,10 @@ export default class FileApi{
     }
 
     async action_file() {
-        const file = this.req.params[0];
+        let file: string = this.req.params[0];
+
+        if(!/^\w+:/.test(file))
+            file = '/' + file;
 
         if(!path.isAbsolute(file))
             throw createError(400, 'Path is not absolute');
