@@ -28,7 +28,7 @@ export default class FileApi{
         try {
             await fs.promises.access(path.join(dir, 'anybalance-manifest.xml'));
         }catch(e){
-            throw createError(403, 'You can access files only in the same directory with anybalance-manifest.xml');
+            throw createError(403, 'You can only access files in the same directory with anybalance-manifest.xml');
         }
 
         this.res.sendFile(file);
