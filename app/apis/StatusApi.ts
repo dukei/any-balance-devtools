@@ -2,7 +2,8 @@ import log from '../../common/log' ;
 import config from '../config';
 import createError from 'http-errors';
 import {Request, Response} from "express";
-import finder from 'find-package-json';
+import appRoot from 'app-root-path';
+import * as path from "path";
 
 export default class StatusApi{
     private req: Request;
@@ -16,8 +17,7 @@ export default class StatusApi{
     async action_version() {
         let b = this.req.body;
 
-        const f = finder(module);
-        const pkg = f.next().value!;
+        const pkg = require(path.join(appRoot.path, 'package.json'));
 
         this.res.json({status: 'ok', version: pkg.version});
 

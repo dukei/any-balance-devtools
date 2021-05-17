@@ -135,7 +135,7 @@ export class BrowserManager {
 
         await page.on('console', msg => {
             const url = page.url();
-            log.info('page console (' + url + '): ' + msg);
+            log.info('page console (' + url + '): ' + msg.text());
         });
     }
 }
