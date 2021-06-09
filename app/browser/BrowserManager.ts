@@ -1,5 +1,6 @@
 import puppeteer, {Browser, BrowserContext, Page} from "puppeteer";
 import log from "../../common/log";
+import * as path from "path";
 
 type SpecificBrowser = {
     key: string
@@ -34,10 +35,20 @@ export class BrowserManager {
         let b = this.browsers[key];
         if(!b) {
             //TODO: replace to SingleInit
+            //https://github.com/vercel/pkg/issues/204#issuecomment-363219758
+            const isPkg = (<any>process).pkg !== undefined;
+            const chromiumExecutablePath = (isPkg
+                    ? puppeteer.executablePath().replace(
+                        /^.*?[\/\\]node_modules[\/\\]puppeteer[\/\\]\.local-chromium/,
+                        path.join(path.dirname(process.execPath), 'chromium')
+                    )
+                    : puppeteer.executablePath()
+            )
             const br = await puppeteer.launch({
                 args: args.proxy ? [ `--proxy-server=${args.proxy}` ] : undefined,
                 headless: headless,
-                userDataDir: args.userDataDir
+                userDataDir: args.userDataDir,
+                executablePath: chromiumExecutablePath
             });
             this.browsers[key] = b = {
                 key: key,
