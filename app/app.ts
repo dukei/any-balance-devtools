@@ -5,12 +5,13 @@ import log from "../common/log";
 import routes from './routes';
 import yargs, {Arguments} from "yargs";
 import {hideBin} from "yargs/helpers";
+import ABModule from "./abmodules/ABModule";
 
 (async () => {
     log.debug(`Starting configuration (${__filename}, ${ConfigHelper.getConfigTarget()})`);
 
     await yargs(hideBin(process.argv))
-        .usage("Usage: $0 [command] [--options]")
+        .usage("Usage: $0 [command] [--help] [..--options]")
         .version()
         .alias('version', 'v')
         .help()
@@ -20,6 +21,52 @@ import {hideBin} from "yargs/helpers";
             command: 'serve',
             describe: 'Start the debugger helper server',
             handler: onServe
+        })
+        .command({
+            command: 'assemble',
+            aliases: ['pack'],
+            handler: onAssemble,
+            builder: yargs => {
+                return yargs
+                    .option('dir', {
+                        alias: 'd',
+                        describe: 'Path to provider dir (current dir otherwise)',
+                        type: 'string'
+                    })
+                    .option('build', {
+                        default: 'head',
+                        alias: 'b',
+                        choices: ['head','source'],
+                        describe: 'Build version of modules to use',
+                        type: 'string'
+                    })
+                    .option('out', {
+                        alias: 'o',
+                        default: 'provider.zip',
+                        describe: 'Name (path) to output zip file',
+                        type: 'string'
+                    });
+            },
+            describe: 'Assemble provider and its modules into zip'
+        })
+        .command({
+            command: 'compile',
+            handler: onCompile,
+            builder: yargs => {
+                return yargs
+                    .option('dir', {
+                        alias: 'd',
+                        describe: 'Path to module base dir (current dir otherwise)',
+                        type: 'string'
+                    })
+                    .option('build', {
+                        default: 'head',
+                        alias: 'b',
+                        describe: 'Build version to compile to',
+                        type: 'string'
+                    })
+            },
+            describe: 'Compiles module'
         })
         .strict()
         .parse();
@@ -35,4 +82,25 @@ async function onServe(argv: Arguments){
     app.listen({ port: config.http.port }, () =>
         log.info(`🚀 Server ready at http://localhost:${config.http.port}`)
     );
+}
+
+async function onAssemble(argv: Arguments){
+    const source = argv.dir as string || process.cwd();
+    const output = argv.out as string;
+    const version = argv.build as string;
+
+//    console.log(argv);
+
+    const result = await ABModule.assemble(source, output, version);
+    log.info("SUCCESS: Provider has been packed to " + result);
+}
+
+async function onCompile(argv: Arguments){
+    const source = argv.dir as string || process.cwd();
+    const version = argv.build as string;
+
+//    console.log(argv);
+
+    const result = await ABModule.buildModule(source, version);
+    log.info("SUCCESS: Module has been compiled to " + result);
 }

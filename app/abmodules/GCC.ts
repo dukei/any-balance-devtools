@@ -9,6 +9,8 @@ export default class GCC{
     private readonly opts: any; //
 
     constructor(gen: number=1, files: string[], output: string) {
+        GCC.initializePlatform();
+
         this.opts = {
             language_in: 'ECMASCRIPT_NEXT',
             language_out: gen > 1 ? 'ECMASCRIPT_2017' : 'ECMASCRIPT5',
@@ -24,10 +26,12 @@ export default class GCC{
 
     public async run(): Promise<number>{
         return new Promise(resolve => {
+            log.info("Compiling js with GCC: " + JSON.stringify(this.opts, undefined, '  '));
             this.compiler.run((exitCode, stdout, stderr) => {
-                log.info("Compiling js with GCC: " + JSON.stringify(this.opts));
-                log.info(stdout);
-                log.error(stderr);
+                if(stdout.trim())
+                    log.info(stdout);
+                if(stderr.trim())
+                    log.error(stderr);
                 log.info("GCC exited with code " + exitCode);
                 resolve(exitCode);
             })

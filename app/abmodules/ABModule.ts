@@ -8,6 +8,8 @@ import CriticalSection from "../../common/CriticalSection";
 import GCC from "./GCC";
 import log from "../../common/log";
 import shell from "shelljs";
+import ABModuleContext from "./ABModuleContext";
+import archiver from "archiver";
 
 export type ABModuleRepositories = {
     [name: string] : string
@@ -21,12 +23,19 @@ export type ABModuleFile = {
     }
 }
 
+export interface ABModuleDiskFile extends ABModuleFile {
+    path: string
+}
+
 export const Module_Repo_Default = 'default';
 export const Module_Repo_Self = '__self';
 export const Module_Version_Source = 'source';
 export const Module_Version_Head = 'head';
 export const Module_Version_Default = Module_Version_Head;
 export const Module_File_Manifest = 'anybalance-manifest.xml';
+export const Module_File_Type_JS = 'js';
+export const Module_File_Type_Manifest = 'manifest';
+export const Module_Repo_Default_Dirname = 'modules';
 
 export enum ModuleType {
     PROVIDER= 1,
@@ -49,8 +58,8 @@ export default class ABModule{
     public readonly repo: string;
     public readonly id: string;
     public readonly type: ModuleType;
-    public readonly version?: string;
     public readonly path: string;
+    public readonly version: string
     public gen!: number; //Provider generation
 
     private xmlManifest!: Document;
@@ -60,40 +69,52 @@ export default class ABModule{
     public isLoaded: boolean = false;
     public errorMessage?: string;
 
-    private static modulesCache: {[name: string]: ABModule} = {};
-    private static defaultVersion: string = Module_Version_Default;
+    private context: ABModuleContext;
 
-    private constructor(opt: {id: string, path: string, type: ModuleType, repo: string, version?: string}) {
+    private constructor(opt: {id: string, path: string, type: ModuleType, repo: string, version: string, context: ABModuleContext}) {
         this.repo = opt.repo;
         this.id = opt.id;
         this.path = opt.path;
-        this.version = opt.version;
         this.type = opt.type;
+        this.version = opt.version;
+        this.context = opt.context;
     }
 
     /**
-     * Создаёт модуль или провайдер
+     * Создаёт модуль
      *
-     * @param idOrPath - path в случае repo=_self, id в противном случае
+     * @param id
      * @param repo - id repo
      * @param version - версия модуля (source или head)
      */
-    public static async create(idOrPath: string, _repo: string = Module_Repo_Default, version: string = ABModule.defaultVersion): Promise<ABModule>{
-        let module: ABModule;
-        if(this.isRoot(_repo)){
-            let {id, type, repo, xmlManifest} = await this.guessModuleIdAndRepo(idOrPath);
-            module = new ABModule({
-                id, type, path: idOrPath, repo: repo || _repo, version
-            });
-            module.xmlManifest = xmlManifest;
-        }else{
-            if(!config.ab.modules[_repo])
-                throw new Error('Modules directory "' + _repo + "' is not configured! Edit config.");
+    public static async createModuleFromId(id: string, _repo: string = Module_Repo_Default, version: string, context: ABModuleContext): Promise<ABModule>{
+        let modulesPath: string|undefined = config.ab.modules[_repo];
+        if(!modulesPath)
+            modulesPath = await context.getRepoPath(_repo);
+        if(!modulesPath)
+            throw new Error('Modules directory "' + _repo + "' is not configured! Edit config.");
 
-            module = new ABModule({
-                id: idOrPath, repo: _repo, type: ModuleType.PROVIDER, path: path.join(config.ab.modules[_repo], idOrPath), version
-            });
-        }
+        const module = new ABModule({
+            id: id, repo: _repo, type: ModuleType.MODULE, path: path.join(modulesPath, id), version: version, context: context
+        });
+
+        return module;
+    }
+
+    /**
+     * Создаёт провайдер или модуль по пути к нему
+     *
+     * @param pth - path в случае repo=_self
+     * @param repo - id repo
+     * @param version - версия модуля (source или head)
+     */
+    public static async createFromPath(pth: string, version: string, context: ABModuleContext): Promise<ABModule>{
+        let {id, type, repo, xmlManifest} = await this.guessModuleIdAndRepo(pth);
+        const module = new ABModule({
+            id, type, path: pth, repo: repo || Module_Repo_Self, version: version, context: context
+        });
+        module.xmlManifest = xmlManifest;
+        context.addToCache(module);
 
         return module;
     }
@@ -122,11 +143,15 @@ export default class ABModule{
         if(!id)
             throw new Error(dir + ' contains empty id node!');
 
-        const dirname = path.basename(dir);
-        if(dirname !== id)
-            throw new Error(dir + ' != ' + id + ': id should match the directory name of ' + (type === ModuleType.MODULE ? 'module' : 'provider') + '!');
+        const idSegments = id.split(/\//);
+        const pathSegments = path.normalize(dir).split(/[\/\\]/).filter(s => !!s);
+        for(let i=1; i<=idSegments.length; ++i){
+            if(idSegments[idSegments.length - i] !== pathSegments[pathSegments.length - i])
+                throw new Error(dir + ' does not end with ' + id + ': id should match the path of a ' + (type === ModuleType.MODULE ? 'module' : 'provider') + '!');
+        }
 
-        var repoPath = path.dirname(dir); //Путь до репо (без ID модуля)
+        const repoPathSegments = pathSegments.slice(0, -idSegments.length);
+        const repoPath = path.join.apply(path.join, repoPathSegments); //Путь до репо (без ID модуля)
 
         for(let _repo in config.ab.modules){
             const rPath = config.ab.modules[_repo];
@@ -135,6 +160,11 @@ export default class ABModule{
                 break;
             }
         }
+
+        //Если путь к модулям не сконфигурирован, но данный путь лежит в modules,
+        // то считаем это путем к репе модулей по-умолчанию
+        if(!repo && repoPathSegments[repoPathSegments.length-1] === Module_Repo_Default_Dirname)
+            repo = Module_Repo_Default;
 
         return {type, id, repo, xmlManifest: doc};
     }
@@ -146,15 +176,15 @@ export default class ABModule{
     }
 
     public getFullId() {
-        return ABModule.getFullId(this.id, this.repo);
+        return ABModule.getFullId(this.id, this.repo, this.version);
     }
 
     public static isRoot(repo?: string){
         return repo === Module_Repo_Self;
     }
 
-    public static getFullId(id: string, repo: string) {
-        return repo + ':' + id;
+    public static getFullId(id: string, repo: string, version: string) {
+        return repo + ':' + id + '@' + version;
     }
 
     private async loadXmlManifest(){
@@ -165,31 +195,11 @@ export default class ABModule{
             if(this.xmlManifest)
                 return;
 
-            const pathManifest = path.join(this.path, Module_File_Manifest);
+            const pathManifest = this.getFilePath(Module_File_Manifest);
             const xml = await fs.readFile(pathManifest, "utf8")
             const doc = new dom().parseFromString(xml);
             this.xmlManifest = doc;
        });
-    }
-
-    public static clearModulesCache() { this.modulesCache = {}; }
-
-    public static async createModule(id: string, repo: string = Module_Repo_Default, version: string = ABModule.defaultVersion): Promise<ABModule>{
-        if(this.isRoot(repo))
-            return await this.create(id, repo, version);
-
-        const fid = this.getFullId(id, repo);
-        const cached = this.modulesCache[fid];
-        if(cached) {
-            if(cached.version !== version)
-                throw new Error('Module ' + fid + ' is already loaded with version ' + cached.version + '. Can not reload it with version ' + version + '!');
-            return cached;
-        }
-
-        const m = await this.create(id, repo, version);
-        this.modulesCache[fid] = m;
-
-        return m;
     }
 
     public getGen(): number {
@@ -249,21 +259,26 @@ export default class ABModule{
                 if (!id)
                     throw new Error('No id specified for dependency module!');
 
-                const module = await ABModule.createModule(id, repo, version);
+                const module = await this.createModule(id, repo, version);
 
                 modules.push(module);
             }
         }
     }
 
-    public async load(){
+    private async createModule(id: string, repo?: string, version?: string): Promise<ABModule>{
+        return this.context.createModule(id, repo, version);
+    }
+
+    public async load(skipModules?: boolean){
         if(this.isLoaded)
             return; //Уже загружен
 
         try{
             await this.loadXmlManifest();
             await this.loadFilesList();
-            await this.loadModulesList();
+            if(!skipModules)
+                await this.loadModulesList();
             this.gen = this.getGen();
             this.isLoaded = true;
         }catch(e){
@@ -307,25 +322,24 @@ export default class ABModule{
             await after(module);
     }
 
-    public static async buildModule(basepathOrModule: string|ABModule, version: string=ABModule.defaultVersion){
-        let basepath: string, provider: ABModule;
+    public static async buildModule(basepathOrModule: string|ABModule, version: string): Promise<string>{
+        let provider: ABModule;
 
         if(version === Module_Version_Source)
             throw new Error('Target version can not be ' + Module_Version_Source);
 
         if(typeof(basepathOrModule) == 'string'){
-            basepath = basepathOrModule;
+            const basepath = basepathOrModule;
             if(!await checkFileExists(basepath))
                 throw new Error('Folder ' + basepath + ' does not exist!');
 
-            provider = await this.createModule(basepath, Module_Repo_Self);
+            const mc = new ABModuleContext(version, basepath);
+            provider = await this.createFromPath(basepath, Module_Version_Source, mc);
         }else{
-            basepath = basepathOrModule.getFilePath();
-            version = basepathOrModule.version || this.defaultVersion; //Билдим модуль для той же версии
-            provider = await ABModule.create(basepathOrModule.id, basepathOrModule.repo, Module_Version_Source); //В обход кеша обязательно
+            provider = await basepathOrModule.createModule(basepathOrModule.id, basepathOrModule.repo, Module_Version_Source);
         }
 
-        await provider.load();
+        await provider.load(true);
 
         const sub_module_id = provider.id.replace(/[\\\/]+/g, '.');
 
@@ -333,7 +347,7 @@ export default class ABModule{
         const otherFiles: ABModuleFile[] = [];
         for(let i=0; i<provider.files.length; ++i){
             const file = provider.files[i];
-            if(file.type === 'js' && !/:/.test(file.name))
+            if(file.type === Module_File_Type_JS && !/:/.test(file.name))
                 files.push(provider.getFilePath(file.name));
             else
                 otherFiles.push(file);
@@ -363,15 +377,14 @@ export default class ABModule{
             await fs.copyFile(provider.getFilePath(otherFile.name), provider.getFilePath(otherFile.name, version));
         }
 
-        log.info('SUCCESS: Module ' + provider.getFullId() + ' has been compiled to version ' + version);
-        return provider;
+        return path.dirname(provider.getFilePath(Module_File_Manifest, version));
     }
 
-    public static async getFilesMaxTime(module: ABModule, allowNotExists?: boolean): Promise<number>{
+    public async getFilesMaxTime(allowNotExists?: boolean): Promise<number>{
         let maxTime = 0;
-        for(let i=0; i<module.files.length; ++i){
-            let file = module.files[i];
-            let pth = module.getFilePath(file.name);
+        for(let i=0; i<this.files.length; ++i){
+            let file = this.files[i];
+            let pth = this.getFilePath(file.name);
             let time: number = 0;
             try{
                 let stat = await fs.stat(pth);
@@ -389,39 +402,39 @@ export default class ABModule{
         return maxTime;
     }
 
-    public static async checkIfBuilt(module: ABModule): Promise<boolean>{
-        if(module.version === Module_Version_Source)
+    public async checkIfBuilt(): Promise<boolean>{
+        if(this.version === Module_Version_Source)
             return true; //Только для head проверям, что несбилжено
-        if(module.type !== ModuleType.MODULE)
+        if(this.type !== ModuleType.MODULE)
             return true;
 
-        var moduleSource = await this.create(module.id, module.repo, Module_Version_Source); //Специально мимо кеша создаём
+        var moduleSource = await this.createModule(this.id, this.repo, Module_Version_Source);
         await moduleSource.load();
 
-        var time = this.getFilesMaxTime(module, true);
-        var timeSrc = this.getFilesMaxTime(moduleSource);
+        var time = this.getFilesMaxTime(true);
+        var timeSrc = moduleSource.getFilesMaxTime();
 
         return timeSrc <= time;
     }
 
-    public static async checkIfCommitted(module: ABModule): Promise<boolean>{
-        const pth = module.getFilePath().replace(/[\\\/]+$/, '');
+    public async checkIfCommitted(): Promise<boolean>{
+        const pth = this.getFilePath().replace(/[\\\/]+$/, '');
 
         const cmdLine = 'git -C "' + pth + '" status "' + pth + '"';
 
-        const output = await this.shellExec(cmdLine);
+        const output = await ABModule.shellExec(cmdLine);
 
         if(/nothing to commit/i.test(output))
             return true;
 
-        log.info('Module is not committed: ' + module.getFullId());
+        log.info('Module is not committed: ' + this.getFullId());
         return false;
     }
 
     public static async shellExec(cmdLine: string): Promise<string>{
         return new Promise<string>(((resolve, reject) => {
             shell.exec(cmdLine, (code, stdout, stderr) => {
-                log.info(stdout);
+                log.debug(stdout);
                 log.error(stderr);
                 if(code !== 0)
                     reject(new Error("Error executing " + cmdLine + "\nExit code: " + code));
@@ -431,18 +444,107 @@ export default class ABModule{
         }));
     }
 
-    public static async findGitRoot(pth: string): Promise<string|undefined>{
+    public static async findSiblingDir(pth: string, dirname: string): Promise<string|undefined>{
         let newPath = pth;
         do{
             pth = newPath;
-            if(await checkFileExists(path.join(pth, '.git')))
-                return pth;
+            const siblingPath = path.join(pth, dirname);
+            if(await checkFileExists(siblingPath))
+                return siblingPath;
             newPath = path.dirname(pth); //Перешли на уровень вверх
         }while(newPath && pth !== newPath);
     }
 
-    public static setDefaultVersion(version: string){
-        this.defaultVersion = version;
+    public static async findGitRoot(pth: string): Promise<string|undefined>{
+        const sibpath = await this.findSiblingDir(pth, '.git');
+        return sibpath && path.dirname(sibpath);
+    }
+
+    public static async assemble(pth: string, output?: string, version?: string): Promise<string>{
+        log.info("Assembling " + pth);
+        if(!version)
+            version = Module_Version_Default;
+        if(!output)
+            output = path.join(pth, 'provider.zip');
+        else if(!path.isAbsolute(output))
+            output = path.join(process.cwd(), output);
+
+        const provider = await this.createFromPath(pth, version, new ABModuleContext(pth, version));
+
+        const modules: {[id: string]: ABModule} = {}; //просто список используемых модулей
+        const deps: ABModule[] = []; //Модули, от которых зависим.
+
+        log.trace('Traversing dependencies...');
+        const modulesFound: string[] = [];
+
+        await ABModule.traverseDependencies(provider, undefined, async m => {
+                const id = m.getFullId();
+                if(modules[id])
+                    return;
+                modules[id] = m;
+                deps.push(m);
+                modulesFound.push(id);
+            }
+        );
+
+        const files: ABModuleDiskFile[] = [];
+        const fileNames: {[name: string]: string} = {};
+
+        log.trace('Found total ' + deps.length + ' modules: ' + modulesFound.join(', '));
+        log.trace('Listing files...');
+        for(let i=0; i<deps.length; ++i){
+            const m = deps[i];
+            const root = m === provider;
+            for(let j=0; j<m.files.length; ++j){
+                const file = m.files[j];
+                if(root || file.type === Module_File_Type_JS){
+                    let name = file.name, k=0;
+                    while(fileNames[name]){
+                        name = 'f' + (++k) + '_' + file.name;
+                    }
+                    fileNames[file.name] = name;
+
+                    files.push({path: m.getFilePath(file.name), name: name, type: file.type, attrs: file.attrs});
+                }
+            }
+        }
+
+        log.trace('Copying files...');
+
+        const arc = archiver('zip', {
+            zlib: {level: 9}
+         });
+        const outputStream = fs.createWriteStream(output);
+
+        arc.on('error', err => {throw err});
+        arc.pipe(outputStream);
+
+        const filesList: string[] = [];
+
+        for(let i=0; i<files.length; ++i){
+            const file = files[i];
+            if(file.type !== Module_File_Type_Manifest)
+                arc.file(file.path, {
+                    name: file.name
+                });
+
+            const attrs = [];
+            if(file.attrs) {
+                for (let a in (file.attrs || {})) {
+                    attrs.push(a + '="' + file.attrs[a] + '"');
+                }
+            }
+            filesList.push('<' + file.type + (attrs.length ? ' ' + attrs.join(' ') : '') + '>' + file.name + '</' +file.type+'>');
+        }
+
+        let manifest = await fs.readFile(provider.getFilePath(Module_File_Manifest), 'utf-8');
+        manifest = manifest.replace(/<files[^>]*>[\s\S]*?<\/files>/i, '<files>\n\t\t' + filesList.join('\n\t\t') + '\n\t</files>');
+        arc.append(manifest, {name: Module_File_Manifest});
+
+        log.trace('Compressing files to ' + output);
+        await arc.finalize();
+
+        return output;
     }
 
 
