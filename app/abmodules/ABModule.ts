@@ -21,6 +21,7 @@ export type ABModuleFile = {
     attrs?: {
         [name: string]: string
     }
+    content?: string|Buffer
 }
 
 export interface ABModuleDiskFile extends ABModuleFile {
@@ -35,7 +36,11 @@ export const Module_Version_Default = Module_Version_Head;
 export const Module_File_Manifest = 'anybalance-manifest.xml';
 export const Module_File_Type_JS = 'js';
 export const Module_File_Type_Manifest = 'manifest';
+export const Module_File_Type_History = 'history';
 export const Module_Repo_Default_Dirname = 'modules';
+export const Module_File_Type_Preferences = 'preferences';
+
+export const Module_File_Types_Text = [Module_File_Type_JS, Module_File_Type_Manifest, Module_File_Type_History, Module_File_Type_Preferences];
 
 export enum ModuleType {
     PROVIDER= 1,
@@ -78,6 +83,14 @@ export default class ABModule{
         this.type = opt.type;
         this.version = opt.version;
         this.context = opt.context;
+    }
+
+    public get name(): string {
+        let node = xpath.select1('//provider/name', this.xmlManifest) as Element;
+        if(!node)
+            throw new Error(this.path + ' does not contain name node!');
+
+        return node.textContent?.trim() || '';
     }
 
     /**
@@ -208,7 +221,20 @@ export default class ABModule{
         return +(gen?.textContent || 1);
     }
 
-    private loadFilesList(){
+    public getIdAndVersion(): { id: string, version: number, majorVersion?: string } {
+        let node = xpath.select1('//provider/id', this.xmlManifest) as Element;
+        if(!node)
+            throw new Error(this.path + ' does not contain id node!');
+
+        const attrs = node.attributes;
+        return {
+            id: node.textContent || '',
+            version: +(attrs.getNamedItem('version')?.value || 0),
+            majorVersion: attrs.getNamedItem('major_version')?.value
+        }
+    }
+
+    private async loadFilesList(){
         let node = xpath.select1('//provider/files', this.xmlManifest) as Element;
         if(!node)
             throw new Error(this.path + ' does not contain files node!');
@@ -229,12 +255,19 @@ export default class ABModule{
             };
 
             const attrs = node.attributes;
-            for(var j=0; j<attrs.length; ++j){
+            for(let j=0; j<attrs.length; ++j){
                 if(!file.attrs)
                     file.attrs = {};
                 const attr = attrs.item(j);
                 if(attr)
                     file.attrs[attr.name] = attr.textContent || '';
+            }
+
+            if(this.context.loadFileContent){
+                if(Module_File_Types_Text.indexOf(file.type) >= 0)
+                    file.content = await this.getFileText(file.name);
+                else
+                    file.content = await fs.readFile(this.getFilePath(file.name));
             }
 
             files.push(file);
@@ -308,6 +341,10 @@ export default class ABModule{
         }
     }
 
+    public async getFileText(name?: string, version?: string): Promise<string>{
+        return fs.readFile(this.getFilePath(name, version), 'utf-8');
+    }
+
     public static async traverseDependencies(module: ABModule, before?: ABModuleDoer, after?: ABModuleDoer){
         await module.load();
         if(before)
@@ -333,7 +370,7 @@ export default class ABModule{
             if(!await checkFileExists(basepath))
                 throw new Error('Folder ' + basepath + ' does not exist!');
 
-            const mc = new ABModuleContext(version, basepath);
+            const mc = new ABModuleContext({defaultVersion: version, mainModulePath: basepath});
             provider = await this.createFromPath(basepath, Module_Version_Source, mc);
         }else{
             provider = await basepathOrModule.createModule(basepathOrModule.id, basepathOrModule.repo, Module_Version_Source);
@@ -408,11 +445,11 @@ export default class ABModule{
         if(this.type !== ModuleType.MODULE)
             return true;
 
-        var moduleSource = await this.createModule(this.id, this.repo, Module_Version_Source);
+        const moduleSource = await this.createModule(this.id, this.repo, Module_Version_Source);
         await moduleSource.load();
 
-        var time = this.getFilesMaxTime(true);
-        var timeSrc = moduleSource.getFilesMaxTime();
+        const time = await this.getFilesMaxTime(true);
+        const timeSrc = await moduleSource.getFilesMaxTime();
 
         return timeSrc <= time;
     }
@@ -433,9 +470,12 @@ export default class ABModule{
 
     public static async shellExec(cmdLine: string): Promise<string>{
         return new Promise<string>(((resolve, reject) => {
-            shell.exec(cmdLine, (code, stdout, stderr) => {
-                log.debug(stdout);
-                log.error(stderr);
+            log.debug("Executing " + cmdLine);
+            shell.exec(cmdLine, {silent: false, async: true}, (code, stdout, stderr) => {
+                if(stdout)
+                    log.debug(stdout);
+                if(stderr)
+                    log.error(stderr);
                 if(code !== 0)
                     reject(new Error("Error executing " + cmdLine + "\nExit code: " + code));
                 else
@@ -469,7 +509,7 @@ export default class ABModule{
         else if(!path.isAbsolute(output))
             output = path.join(process.cwd(), output);
 
-        const provider = await this.createFromPath(pth, version, new ABModuleContext(pth, version));
+        const provider = await this.createFromPath(pth, version, new ABModuleContext({mainModulePath: pth, defaultVersion: version}));
 
         const modules: {[id: string]: ABModule} = {}; //просто список используемых модулей
         const deps: ABModule[] = []; //Модули, от которых зависим.

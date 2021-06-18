@@ -1,4 +1,4 @@
-import puppeteer, {Browser, BrowserContext, Page} from "puppeteer";
+import puppeteer, {Browser, BrowserContext, BrowserFetcher, Page} from "puppeteer";
 import log from "../../common/log";
 import * as path from "path";
 
@@ -37,12 +37,15 @@ export class BrowserManager {
             //TODO: replace to SingleInit
             //https://github.com/vercel/pkg/issues/204#issuecomment-363219758
             const isPkg = (<any>process).pkg !== undefined;
+            //https://github.com/puppeteer/puppeteer/issues/6899
+            const executablePath = <string>(<any>puppeteer).executablePath();
+
             const chromiumExecutablePath = (isPkg
-                    ? puppeteer.executablePath().replace(
+                    ? executablePath.replace(
                         /^.*?[\/\\]node_modules[\/\\]puppeteer[\/\\]\.local-chromium/,
                         path.join(path.dirname(process.execPath), 'chromium')
                     )
-                    : puppeteer.executablePath()
+                    : executablePath
             )
             const br = await puppeteer.launch({
                 args: args.proxy ? [ `--proxy-server=${args.proxy}` ] : undefined,
@@ -55,7 +58,7 @@ export class BrowserManager {
                 pages: 0,
                 browser: br
             };
-            log.info("Created browser", key);
+            log.trace("Created browser", key);
         }
         return b;
     }
@@ -76,14 +79,14 @@ export class BrowserManager {
         await page.setDefaultNavigationTimeout(180000);
 
         ++b.pages;
-        log.info("Created page", b.key, b.pages);
+        log.trace("Created page", b.key, b.pages);
 
         page.on('close', async () => {
-            log.info("Closing page", b.key, b.pages);
+            log.trace("Closing page", b.key, b.pages);
             --b.pages;
             if(b.pages <= 0){
                 delete this.browsers[b.key];
-                log.info("Closing browser", b.key);
+                log.trace("Closing browser", b.key);
                 await b.browser.close();
             }
         });

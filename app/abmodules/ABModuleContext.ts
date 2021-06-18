@@ -7,10 +7,17 @@ export default class ABModuleContext {
     public readonly defaultVersion: string;
     private readonly mainModulePath: string; //Path to mainModule
     private defaultModulesPath?: string
+    public readonly loadFileContent?: boolean
 
-    public constructor(mainModulePath: string, defaultVersion: string) {
-        this.defaultVersion = defaultVersion;
-        this.mainModulePath = mainModulePath;
+    public constructor(opt: {
+                            mainModulePath: string,
+                            defaultVersion: string,
+                            loadFileContent?: boolean
+                       }
+    ) {
+        this.defaultVersion = opt.defaultVersion;
+        this.mainModulePath = opt.mainModulePath;
+        this.loadFileContent = opt.loadFileContent;
     }
 
     public clearModulesCache() { this.cache = {}; }

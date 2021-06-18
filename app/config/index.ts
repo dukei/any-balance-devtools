@@ -1,4 +1,5 @@
 import * as path from "path";
+import {ABCmdTemplate} from "../abmodules/ABVersionIncrementer";
 
 export type Config = {
     debug?: boolean,
@@ -18,6 +19,9 @@ export type Config = {
     	modules: {
 			[name: string]: string
 			default: string
+		},
+		templates: {
+    		[key in ABCmdTemplate]: string
 		}
 	}
 }

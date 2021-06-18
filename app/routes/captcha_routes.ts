@@ -6,7 +6,7 @@ import bodyParser from "body-parser";
 
 export default function(router: Router) {
     const r = express.Router({mergeParams: true});
-    router.use('/captcha/:action', bodyParser.urlencoded({extended: true}), r);
+    router.use('/captcha/:action', <any>bodyParser.urlencoded({extended: true}), r);
 
     const handler = async (req: any, res: any) => {
         try {
