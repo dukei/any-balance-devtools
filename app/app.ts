@@ -7,6 +7,7 @@ import yargs, {Arguments} from "yargs";
 import {hideBin} from "yargs/helpers";
 import ABModule from "./abmodules/ABModule";
 import ABVersionIncrementer from "./abmodules/ABVersionIncrementer";
+import * as path from "path";
 
 (async () => {
     log.debug(`Starting configuration (${__filename}, ${ConfigHelper.getConfigTarget()})`);
@@ -97,7 +98,7 @@ async function onServe(argv: Arguments){
 }
 
 async function onAssemble(argv: Arguments){
-    const source = argv.dir as string || process.cwd();
+    const source = path.resolve(argv.dir as string) || process.cwd();
     const output = argv.out as string;
     const version = argv.build as string;
 
@@ -108,7 +109,7 @@ async function onAssemble(argv: Arguments){
 }
 
 async function onCompile(argv: Arguments){
-    const source = argv.dir as string || process.cwd();
+    const source = path.resolve(argv.dir as string) || process.cwd();
     const version = argv.build as string;
 
     log.info("About to compile " + source);
@@ -118,7 +119,7 @@ async function onCompile(argv: Arguments){
 }
 
 async function onIncrementVersion(argv: Arguments){
-    const source = argv.dir as string || process.cwd();
+    const source = path.resolve(argv.dir as string) || process.cwd();
 
     log.info("About to increment version of " + source);
 
@@ -131,7 +132,7 @@ function onCommand(command: (argv: Arguments) => Promise<void>){
         try {
             await command.apply(null, [argv]);
         }catch(e){
-            log.fatal(e.message, e);
+            log.fatal(e);
         }
     }
 }

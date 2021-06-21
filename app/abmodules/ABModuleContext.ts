@@ -8,16 +8,19 @@ export default class ABModuleContext {
     private readonly mainModulePath: string; //Path to mainModule
     private defaultModulesPath?: string
     public readonly loadFileContent?: boolean
+    public readonly loadXmls?: boolean
 
     public constructor(opt: {
                             mainModulePath: string,
                             defaultVersion: string,
                             loadFileContent?: boolean
+                            loadXmls?: boolean
                        }
     ) {
         this.defaultVersion = opt.defaultVersion;
         this.mainModulePath = opt.mainModulePath;
         this.loadFileContent = opt.loadFileContent;
+        this.loadXmls = opt.loadXmls;
     }
 
     public clearModulesCache() { this.cache = {}; }

@@ -1,6 +1,8 @@
 import config from "../config";
 
 import { DOMParserImpl as dom} from 'xmldom-ts';
+import { DOMParserOptions } from "xmldom-ts/dist/types/parser/dom-parser";
+
 import * as xpath from 'xpath-ts';
 import * as fs from "fs-extra";
 import path from 'path';
@@ -22,6 +24,7 @@ export type ABModuleFile = {
         [name: string]: string
     }
     content?: string|Buffer
+    xmlDocument?: Document
 }
 
 export interface ABModuleDiskFile extends ABModuleFile {
@@ -41,12 +44,12 @@ export const Module_Repo_Default_Dirname = 'modules';
 export const Module_File_Type_Preferences = 'preferences';
 
 export const Module_File_Types_Text = [Module_File_Type_JS, Module_File_Type_Manifest, Module_File_Type_History, Module_File_Type_Preferences];
+export const Module_File_Types_XML = [Module_File_Type_Manifest, Module_File_Type_History, Module_File_Type_Preferences];
 
 export enum ModuleType {
     PROVIDER= 1,
     CONVERTER= 2,
     MODULE= 3
-
 }
 
 export type ABModuleDoer = (m: ABModule) => any;
@@ -66,8 +69,6 @@ export default class ABModule{
     public readonly path: string;
     public readonly version: string
     public gen!: number; //Provider generation
-
-    private xmlManifest!: Document;
 
     public readonly files: ABModuleFile[] = [];
     public readonly depends: ABModule[] = [];
@@ -91,6 +92,13 @@ export default class ABModule{
             throw new Error(this.path + ' does not contain name node!');
 
         return node.textContent?.trim() || '';
+    }
+
+    private get xmlManifest(): Document {
+        const manifest = this.files[0];
+        if(manifest.type !== Module_File_Type_Manifest)
+            throw new Error('Manifest is not loaded yet!');
+        return manifest.xmlDocument!;
     }
 
     /**
@@ -122,17 +130,17 @@ export default class ABModule{
      * @param version - версия модуля (source или head)
      */
     public static async createFromPath(pth: string, version: string, context: ABModuleContext): Promise<ABModule>{
-        let {id, type, repo, xmlManifest} = await this.guessModuleIdAndRepo(pth);
+        let {id, type, repo, manifest} = await this.guessModuleIdAndRepo(pth);
         const module = new ABModule({
             id, type, path: pth, repo: repo || Module_Repo_Self, version: version, context: context
         });
-        module.xmlManifest = xmlManifest;
+        module.files.push(manifest);
         context.addToCache(module);
 
         return module;
     }
 
-    private static async guessModuleIdAndRepo(dir: string): Promise<{type: ModuleType, id: string, repo?: string, xmlManifest: Document}>{
+    private static async guessModuleIdAndRepo(dir: string): Promise<{type: ModuleType, id: string, repo?: string, manifest: ABModuleFile}>{
         let type: ModuleType;
         let repo: string|undefined;
 
@@ -146,7 +154,7 @@ export default class ABModule{
         }
 
         const xml = await fs.readFile(pathManifest, "utf8")
-        const doc = new dom().parseFromString(xml);
+        const doc = this.parseXML(pathManifest, xml);
 
         const idNode = xpath.select1('//provider/id', doc) as Node;
         if(!idNode)
@@ -179,7 +187,14 @@ export default class ABModule{
         if(!repo && repoPathSegments[repoPathSegments.length-1] === Module_Repo_Default_Dirname)
             repo = Module_Repo_Default;
 
-        return {type, id, repo, xmlManifest: doc};
+        const manifest: ABModuleFile = {
+            type: Module_File_Type_Manifest,
+            name: Module_File_Manifest,
+            content: xml,
+            xmlDocument: doc
+        };
+
+        return {type, id, repo, manifest};
     }
 
 
@@ -208,10 +223,15 @@ export default class ABModule{
             if(this.xmlManifest)
                 return;
 
-            const pathManifest = this.getFilePath(Module_File_Manifest);
-            const xml = await fs.readFile(pathManifest, "utf8")
-            const doc = new dom().parseFromString(xml);
-            this.xmlManifest = doc;
+            const xml = await this.getFileText(Module_File_Manifest);
+            const doc = ABModule.parseXML(this.getFilePath(Module_File_Manifest), xml);
+
+            this.files.push({
+                type: Module_File_Type_Manifest,
+                name: Module_File_Manifest,
+                content: xml,
+                xmlDocument: doc
+            })
        });
     }
 
@@ -268,6 +288,17 @@ export default class ABModule{
                     file.content = await this.getFileText(file.name);
                 else
                     file.content = await fs.readFile(this.getFilePath(file.name));
+            }
+
+            if(this.context.loadXmls){
+                if(Module_File_Types_XML.indexOf(file.type) >= 0){
+                    if(!file.content)
+                        file.content = await this.getFileText(file.name);
+                    if(file.type === Module_File_Type_Manifest)
+                        file.xmlDocument = this.xmlManifest;
+                    else
+                        file.xmlDocument = ABModule.parseXML(this.getFilePath(file.name), file.content as string);
+                }
             }
 
             files.push(file);
@@ -587,6 +618,20 @@ export default class ABModule{
         return output;
     }
 
-
+    public static parseXML(pth: string, content: string): Document {
+        const errors: string[] = [];
+        const xmlOptions: DOMParserOptions = {
+            locator: {},
+            errorHandler: (key, msg) => {
+                errors.push(`${msg} ${pth}`)
+                //throw new Error(`${pth}: ${msg}`);
+            }
+        }
+        const doc = new dom(xmlOptions).parseFromString(content);
+        if(errors.length > 0){
+            throw new Error(errors.join('\n'));
+        }
+        return doc;
+    }
 }
 

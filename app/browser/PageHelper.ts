@@ -1,5 +1,5 @@
 import {BrowserManager} from "./BrowserManager";
-import * as fs from "fs";
+import * as fs from "fs-extra";
 import * as path from "path";
 import config from "../config/config_development";
 import appRoot from 'app-root-path';
@@ -48,7 +48,7 @@ export class PageHelper {
         page.on('request', async request => {
             if(request.url() === options.url) {
                 const tplname = type === 'v2' ? '/recaptcha.html' : '/recaptcha_v3.html';
-                let template = await fs.promises.readFile(path.join(appRoot.path, 'res/templates') + tplname, 'utf8');
+                let template = await fs.readFile(path.join(appRoot.path, 'res/templates', tplname), 'utf-8');
                 template = template
                     .replace(/%TEXT%/g, options.prompt || 'Please, prove you are not a robot.')
                     .replace(/%TIMELIMIT%/g, '' + (options.timeLimit || 60000))
@@ -113,7 +113,7 @@ export class PageHelper {
         const tplname = 'history.html';
         page.on('request', async request => {
             if(request.url().indexOf(tplname) >= 0) {
-                let template = await fs.promises.readFile(path.join(appRoot.path, 'res/templates', tplname), 'utf8');
+                let template = await fs.readFile(path.join(appRoot.path, 'res/templates', tplname), 'utf-8');
                 template = template
                     .replace(/%PROVIDER_ID%/g, providerId)
                     .replace(/%VERSION%/g, newVersion)

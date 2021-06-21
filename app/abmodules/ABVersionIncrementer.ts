@@ -2,7 +2,7 @@ import ABModule, {
     ABModuleFile,
     Module_File_Manifest,
     Module_File_Type_History,
-    Module_File_Type_JS,
+    Module_File_Type_JS, Module_File_Types_XML,
     Module_Version_Head
 } from "./ABModule";
 import ABModuleContext from "./ABModuleContext";
@@ -60,7 +60,12 @@ export default class ABVersionIncrementer{
 
     public async incrementVersion(){
         const pth = this.pth;
-        const m = await ABModule.createFromPath(pth, Module_Version_Head, new ABModuleContext({mainModulePath: pth, defaultVersion: Module_Version_Head, loadFileContent: true}));
+        const m = await ABModule.createFromPath(pth, Module_Version_Head, new ABModuleContext({
+            mainModulePath: pth,
+            defaultVersion: Module_Version_Head,
+            loadFileContent: true,
+            loadXmls: true
+        }));
         this.m = m;
 
         await m.load();
@@ -70,7 +75,7 @@ export default class ABVersionIncrementer{
             throw new Error("Provider folder should be the same as provider id: " + v.id);
 
         await this.checkJsForStupidErrors();
-
+        await this.checkXMLsForStupidErrors();
         this.changeDescription = await PageHelper.getVersionDescription(((v.majorVersion && v.majorVersion + '.') || '') + (v.version + 1), v.id);
 
         await this.writeProvider();
@@ -107,6 +112,16 @@ export default class ABVersionIncrementer{
             }
         }else {
             log.warn("main.js is not found. Skipping checks for main.js");
+        }
+    }
+
+    private async checkXMLsForStupidErrors(){
+        const m = this.m;
+        const xmls = m.files.filter(f => Module_File_Types_XML.indexOf(f.type) >= 0);
+
+        for(let f of xmls){
+            if(!/^\uFEFF?</.test(f.content! as string))
+                throw new Error("Please remove leading spaces from " + f.name);
         }
     }
 
