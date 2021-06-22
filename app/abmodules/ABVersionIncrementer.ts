@@ -170,65 +170,70 @@ export default class ABVersionIncrementer{
             output: process.stdout
         });
 
-        const question = util.promisify(rlp.question.bind(rlp));
+        try {
+            const question = util.promisify(rlp.question.bind(rlp));
 
-        if (!/jquery/i.test(manifest) && !/no_browser/.test(manifest)) {
-            const answer: string = <string><unknown>await question('You do not use jquery in your provider! To improve compatibility you must add "no_browser" flag.\nDo you want to do this (Y/n)?');
-            if (!answer || answer.toLowerCase()[0] === 'y') {
-                var apiFlags = searchRegExpSafe(/<api[^>]*flags\s*=\s*"([^"]+)/i, manifest);
-                // already has some flags
-                if (apiFlags) {
-                    manifest = manifest.replace(/flags\s*=\s*"([^"]+)"/, 'flags="no_browser|$1"');
-                } else {
-                    manifest = manifest.replace(/<provider>/, '<provider>\n\t<api flags="no_browser"/>');
+            if (!/jquery/i.test(manifest) && !/no_browser/.test(manifest)) {
+                const answer: string = <string><unknown>await question('You do not use jquery in your provider! To improve compatibility you must add "no_browser" flag.\nDo you want to do this (Y/n)?');
+                if (!answer || answer.toLowerCase()[0] === 'y') {
+                    var apiFlags = searchRegExpSafe(/<api[^>]*flags\s*=\s*"([^"]+)/i, manifest);
+                    // already has some flags
+                    if (apiFlags) {
+                        manifest = manifest.replace(/flags\s*=\s*"([^"]+)"/, 'flags="no_browser|$1"');
+                    } else {
+                        manifest = manifest.replace(/<provider>/, '<provider>\n\t<api flags="no_browser"/>');
+                    }
                 }
             }
-        }
 
-/*        if(/<type[^>]*>[^<]*money/i.test(manifest) && !/<type[^>]*>[^<]*(bank|wallet)/i.test(manifest)){
-            var result = createInput("type.html","Исправление типа",(5 * 60) * 1000);
-            if(!result)
-                throw new Error(cancel);
+            /*        if(/<type[^>]*>[^<]*money/i.test(manifest) && !/<type[^>]*>[^<]*(bank|wallet)/i.test(manifest)){
+                        var result = createInput("type.html","Исправление типа",(5 * 60) * 1000);
+                        if(!result)
+                            throw new Error(cancel);
 
-            manifest = manifest.replace(/<\/type>/, ', ' + result + '</type>');
-        }
-*/
+                        manifest = manifest.replace(/<\/type>/, ', ' + result + '</type>');
+                    }
+            */
 
-        if(this.mainJs && !/nadapter\.js|<module[^>]+id="nadapter"/i.test(manifest) && /NAdapter/.test(this.mainJs)){
-            const answer: string = <string><unknown>await question('You seem to use NAdapter, but you have forgot to include it in manifest.\nDo you want to do this (Y/n)?');
-            if(!answer || answer.toLowerCase()[0] === 'y') {
-                if(/<depends/i.test(manifest)){
-                    manifest = manifest.replace(/(<depends[^>]*>)/i, '$1\n\t\t<module id="nadapter"/>');
-                }else{
-                    manifest = manifest.replace(/(<files[^>]*>)/i, '<depends>\n\t\t<module id="nadapter"/>\n\t</depends>\n\t$1');
+            if (this.mainJs && !/nadapter\.js|<module[^>]+id="nadapter"/i.test(manifest) && /NAdapter/.test(this.mainJs)) {
+                const answer: string = <string><unknown>await question('You seem to use NAdapter, but you have forgot to include it in manifest.\nDo you want to do this (Y/n)?');
+                if (!answer || answer.toLowerCase()[0] === 'y') {
+                    if (/<depends/i.test(manifest)) {
+                        manifest = manifest.replace(/(<depends[^>]*>)/i, '$1\n\t\t<module id="nadapter"/>');
+                    } else {
+                        manifest = manifest.replace(/(<files[^>]*>)/i, '<depends>\n\t\t<module id="nadapter"/>\n\t</depends>\n\t$1');
+                    }
                 }
             }
-        }
 
-        const historyFile = this.m.files.find(f => f.type === Module_File_Type_History);
-        let historyFileName: string = 'history.xml';
-        if(!historyFile) {
-            manifest = manifest.replace(/(\s*)<\/files>/i, '$1\t<history>' + historyFileName + '</history>$1</files>');
-        }else{
-            historyFileName = historyFile.name;
-        }
+            const historyFile = this.m.files.find(f => f.type === Module_File_Type_History);
+            let historyFileName: string = 'history.xml';
+            if (!historyFile) {
+                manifest = manifest.replace(/(\s*)<\/files>/i, '$1\t<history>' + historyFileName + '</history>$1</files>');
+            } else {
+                historyFileName = historyFile.name;
+            }
 
-        await fs.writeFile(this.m.getFilePath(Module_File_Manifest), manifest);
+            await fs.writeFile(this.m.getFilePath(Module_File_Manifest), manifest);
 
-        let historyContent: string = '<?xml version="1.0" encoding="utf-8"?>\n\
+            let historyContent: string = '<?xml version="1.0" encoding="utf-8"?>\n\
 	<history>\n\
 	</history>';
 
-        if(historyFile)
-            historyContent = await this.m.getFileText(historyFile.name);
+            if (historyFile)
+                historyContent = await this.m.getFileText(historyFile.name);
 
-        const dt = new Date();
-        const major_version_str = (v.majorVersion ? 'major_version="' + v.majorVersion + '" ' : '');
+            const dt = new Date();
+            const major_version_str = (v.majorVersion ? 'major_version="' + v.majorVersion + '" ' : '');
 
-        historyContent = historyContent.replace(/<history>/, '<history>\n\t<change ' + major_version_str + 'version="' + (v.version+1) + '" date="' + dt.getFullYear() + '-' + addZeros(dt.getMonth()+1) + '-' + addZeros(dt.getDate()) + '">\n\t' + this.changeDescription.replace(/\n/g, '\n\t') + '\n\t</change>');
-        historyContent = historyContent.replace(/^\s*|\s*$/g, '');
+            historyContent = historyContent.replace(/<history>/, '<history>\n\t<change ' + major_version_str + 'version="' + (v.version + 1) + '" date="' + dt.getFullYear() + '-' + addZeros(dt.getMonth() + 1) + '-' + addZeros(dt.getDate()) + '">\n\t' + this.changeDescription.replace(/\n/g, '\n\t') + '\n\t</change>');
+            historyContent = historyContent.replace(/^\s*|\s*$/g, '');
 
-        await fs.writeFile(this.m.getFilePath(historyFileName), historyContent);
+            await fs.writeFile(this.m.getFilePath(historyFileName), historyContent);
+
+        }finally{
+            rlp.close();
+        }
     }
 
     private async commit(commitDirs: string[], mesg: string) {
