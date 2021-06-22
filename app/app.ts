@@ -8,12 +8,22 @@ import {hideBin} from "yargs/helpers";
 import ABModule from "./abmodules/ABModule";
 import ABVersionIncrementer from "./abmodules/ABVersionIncrementer";
 import * as path from "path";
+import appRoot from 'app-root-path';
+import * as fs from 'fs-extra';
+
+const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/releases/latest';
 
 (async () => {
     log.debug(`Starting configuration (${__filename}, ${ConfigHelper.getConfigTarget()})`);
+
+    if(process.argv.indexOf('update') < 0)
+        checkForUpdate().catch(e => log.warn(e.message));
+
+    const pkg = require(path.join(appRoot.path, 'package.json'));
+
     await yargs(hideBin(process.argv))
         .usage("Usage: $0 [command] [--help] [..--options]")
-        .version()
+        .version("AnyBalanceDevtools v" + pkg.version)
         .alias('version', 'v')
         .help()
         .demandCommand(1, '')
@@ -81,9 +91,19 @@ import * as path from "path";
             },
             describe: 'Increments version, updates changes history, compiles dependency and commits all changes for a provider'
         })
+        .command({
+            command: 'update',
+            handler: onCommand(onUpdate),
+            describe: 'Updates this program to the latest version if any'
+        })
         .strict()
         .parse();
-})();
+
+    log.debug("Program finished");
+})().catch(e => {
+    log.fatal(e.message);
+    log.debug(e);
+});
 
 async function onServe(argv: Arguments){
     const app : express.Application = express();
@@ -109,7 +129,7 @@ async function onAssemble(argv: Arguments){
 }
 
 async function onCompile(argv: Arguments){
-    const source = path.resolve(argv.dir as string) || process.cwd();
+    const source = (argv.dir as string && path.resolve(argv.dir as string)) || process.cwd();
     const version = argv.build as string;
 
     log.info("About to compile " + source);
@@ -119,7 +139,7 @@ async function onCompile(argv: Arguments){
 }
 
 async function onIncrementVersion(argv: Arguments){
-    const source = path.resolve(argv.dir as string) || process.cwd();
+    const source = (argv.dir as string && path.resolve(argv.dir as string)) || process.cwd();
 
     log.info("About to increment version of " + source);
 
@@ -127,12 +147,75 @@ async function onIncrementVersion(argv: Arguments){
     log.info("SUCCESS: Provider version has been incremented");
 }
 
+async function onUpdate(argv: Arguments) {
+    log.info("Checking for updates");
+
+    const updater = require('git-auto-update');
+    const info = await updater.getLatestReleaseInfo({url: urlRelease, output: true});
+    if(!info)
+        throw new Error('Failed to load release info');
+
+    const pkg = require(path.join(appRoot.path, 'package.json'));
+    const hasNewVersion = await updater.check({info, version: 'v'+pkg.version, url: urlRelease, output: true})
+    if(hasNewVersion) {
+        let programPath: string = path.join(appRoot.path, 'abd');
+        const bPkg = !!(<any>process).pkg;
+        if (bPkg) {
+            programPath = path.dirname(process.execPath);
+            await fs.rename(process.execPath, process.execPath + '.bak');
+        }
+
+        const success = await updater.update({
+            info,
+            url: urlRelease,
+            output: true,
+            updatePath: programPath,
+            temporaryPath: programPath,
+            version: 'v' + pkg.version
+        });
+
+        if (bPkg) {
+            if (!success) {
+                await fs.rename(process.execPath, process.execPath + '.bak');
+            }
+        }
+
+        if (success) {
+            log.info("SUCCESS: Updated");
+        } else {
+            log.info("FAILURE: Not updated");
+        }
+    }else{
+        log.info("SUCCESS: You already have the latest version");
+    }
+}
+
 function onCommand(command: (argv: Arguments) => Promise<void>){
     return async (argv: Arguments) => {
         try {
             await command.apply(null, [argv]);
         }catch(e){
-            log.fatal(e);
+            log.fatal(e.message);
+            log.debug(e);
         }
+    }
+}
+
+async function checkForUpdate(){
+    const bPkg = !!(<any>process).pkg;
+    if(bPkg) //Удаляем старый бэкап
+        await fs.remove(process.execPath + '.bak');
+
+    const pkg = require(path.join(appRoot.path, 'package.json'));
+    const updater = require('git-auto-update');
+    const needUpdate = await updater.check({
+        url: urlRelease,
+        output: true,
+        version: 'v'+pkg.version
+    });
+    if(needUpdate){
+        log.warn("New version of AnyBalanceDevtools is available. Please run 'abd update'");
+    }else{
+        log.info("You have the latest version of AnyBalanceDevtools");
     }
 }

@@ -1,5 +1,6 @@
 import * as path from "path";
 import {ABCmdTemplate} from "../abmodules/ABVersionIncrementer";
+import * as fs from 'fs';
 
 export type Config = {
     debug?: boolean,
@@ -34,6 +35,15 @@ export class ConfigHelper {
 	}
 }
 
-const cfgBasePath = isPkg ? path.join(path.dirname(process.execPath), 'config') : '.'
-const targetConfig: Config = require(cfgBasePath + "/config_" + ConfigHelper.getConfigTarget()).default;
+let cfgBasePath: string = '.';
+const targetConfigName = "/config_" + ConfigHelper.getConfigTarget();
+
+if(isPkg) {
+	cfgBasePath = path.join(path.dirname(process.execPath), 'config');
+	const defaultConfigName = "/config_default";
+	if (!fs.existsSync(cfgBasePath + targetConfigName + '.js'))
+		fs.copyFileSync(cfgBasePath + defaultConfigName + '.js', cfgBasePath + targetConfigName + '.js');
+}
+
+const targetConfig: Config = require(cfgBasePath + targetConfigName).default;
 export default targetConfig;
