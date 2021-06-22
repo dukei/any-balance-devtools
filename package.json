@@ -61,6 +61,6 @@
     "targets": [
       "node12-win-x64"
     ],
-    "outputPath": "dist"
+    "outputPath": "abd"
   }
 }
