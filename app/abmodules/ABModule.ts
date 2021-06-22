@@ -216,11 +216,11 @@ export default class ABModule{
     }
 
     private async loadXmlManifest(){
-        if(this.xmlManifest)
+        if(this.files.length > 0)
             return;
 
         return criticalSection.exclusive(async () => {
-            if(this.xmlManifest)
+            if(this.files.length > 0)
                 return;
 
             const xml = await this.getFileText(Module_File_Manifest);
@@ -348,7 +348,8 @@ export default class ABModule{
         }catch(e){
             this.isLoaded = false;
             this.errorMessage = e.message;
-            throw new Error('Could not load module ' + this.getFullId() + ': ' + e.message);
+            e.message = 'Could not load module ' + this.getFullId() + ': ' + e.message;
+            throw e;
         }
 
     }

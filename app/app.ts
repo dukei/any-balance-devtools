@@ -118,7 +118,7 @@ async function onServe(argv: Arguments){
 }
 
 async function onAssemble(argv: Arguments){
-    const source = path.resolve(argv.dir as string) || process.cwd();
+    const source = (argv.dir as string && path.resolve(argv.dir as string)) || process.cwd();
     const output = argv.out as string;
     const version = argv.build as string;
 
