@@ -1,9 +1,11 @@
 
 import log from "../common/log";
+import * as fs from 'fs-extra';
 import {BrowserManager} from "./browser/BrowserManager";
 import {PageHelper} from "./browser/PageHelper";
 import closureCompiler, {compiler} from 'google-closure-compiler';
 const {getNativeImagePath, getFirstSupportedPlatform} = require('google-closure-compiler/lib/utils');
+import {Schema} from 'node-schematron';
 
 (async () => {
     try {
@@ -27,7 +29,7 @@ const {getNativeImagePath, getFirstSupportedPlatform} = require('google-closure-
 
         log.info("finished: response - " + response);
 */
-
+/*
         const c = new compiler({
             js: 'modules.js',
             compilation_level: 'ADVANCED',
@@ -52,9 +54,20 @@ const {getNativeImagePath, getFirstSupportedPlatform} = require('google-closure-
             console.log("Exitcode: " + exitCode);
 
         })
+*/
 
+        const xmllint = require('xmllint');
+        let result = xmllint.validateXML({
+            xml: await fs.readFile("C:\\SrcRep\\any-balance-providers\\providers\\ab-service-gosuslugi\\anybalance-manifest.xml", 'utf-8'),
+            schema: await fs.readFile("c:\\srcrep\\any-balance-devtools\\res\\xsd\\anybalance-manifest.xsd", 'utf-8')
+        });
 
+        console.log(result);
+        const schema = Schema.fromString(await fs.readFile("c:\\srcrep\\any-balance-devtools\\res\\xsd\\anybalance-manifest.sch", 'utf-8'))
+        result = schema.validateString(await fs.readFile("C:\\SrcRep\\any-balance-providers\\providers\\ab-service-gosuslugi\\anybalance-manifest.xml", 'utf-8'),
+            {debug: true});
 
+        console.log(result);
     }catch(e){
         log.error(e.message, e.stack);
     }

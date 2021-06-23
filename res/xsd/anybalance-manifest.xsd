@@ -1,0 +1,151 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!--Created with Liquid Studio 2021 (https://www.liquid-technologies.com)-->
+<xs:schema elementFormDefault="qualified" version="1.1" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="provider">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:choice maxOccurs="unbounded">
+                    <xs:element name="id" minOccurs="1" maxOccurs="1">
+                        <xs:complexType>
+                            <xs:simpleContent>
+                                <xs:extension base="xs:string">
+                                    <xs:attribute name="version" type="xs:nonNegativeInteger" use="required" />
+                                    <xs:attribute name="major_version" type="xs:decimal" use="optional" />
+                                </xs:extension>
+                            </xs:simpleContent>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="api" minOccurs="0" maxOccurs="1">
+                        <xs:complexType>
+                            <xs:attribute name="flags" type="xs:string" use="optional" />
+                            <xs:attribute name="min_level" type="xs:unsignedByte" use="optional" />
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="name" type="xs:string" minOccurs="1" maxOccurs="1" />
+                    <xs:element name="description" type="textOrHtml" minOccurs="0" maxOccurs="1" />
+                    <xs:element name="instruction" type="textOrHtml" minOccurs="0" maxOccurs="1" />
+                    <xs:element name="author" type="xs:string" minOccurs="1" maxOccurs="unbounded"/>
+                    <xs:element name="depends">
+                        <xs:complexType>
+                            <xs:sequence>
+                                <xs:element name="module" maxOccurs="unbounded">
+                                    <xs:complexType>
+                                        <xs:attribute name="id" type="xs:string" use="required" />
+                                        <xs:attribute name="repo" type="xs:string" use="optional" />
+                                        <xs:attribute name="version" type="xs:string" use="optional" />
+                                    </xs:complexType>
+                                </xs:element>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="files">
+                        <xs:complexType mixed="true">
+                            <xs:sequence>
+                                <xs:choice maxOccurs="unbounded">
+                                    <xs:element name="icon" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="preferences" type="xs:string" />
+                                    <xs:element name="js" minOccurs="1" maxOccurs="unbounded">
+                                        <xs:complexType>
+                                            <xs:simpleContent>
+                                                <xs:extension base="xs:string">
+                                                    <xs:attribute name="target" type="xs:string" use="optional" />
+                                                </xs:extension>
+                                            </xs:simpleContent>
+                                        </xs:complexType>
+                                    </xs:element>
+                                    <xs:element name="history" type="xs:string" minOccurs="0" maxOccurs="1" />
+                                    <xs:element name="settings" minOccurs="0">
+                                        <xs:complexType>
+                                            <xs:simpleContent>
+                                                <xs:extension base="xs:string">
+                                                    <xs:attribute name="target" type="xs:string" use="required" />
+                                                </xs:extension>
+                                            </xs:simpleContent>
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:choice>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="requisites" minOccurs="0" maxOccurs="1">
+                        <xs:complexType mixed="true">
+                            <xs:sequence minOccurs="0">
+                                <xs:element name="requisites" minOccurs="0">
+                                    <xs:complexType>
+                                        <xs:sequence>
+                                            <xs:element name="requisite">
+                                                <xs:complexType>
+                                                    <xs:simpleContent>
+                                                        <xs:extension base="xs:unsignedInt">
+                                                            <xs:attribute name="type" type="xs:string" use="required" />
+                                                            <xs:attribute name="comment" type="xs:string" use="required" />
+                                                        </xs:extension>
+                                                    </xs:simpleContent>
+                                                </xs:complexType>
+                                            </xs:element>
+                                        </xs:sequence>
+                                    </xs:complexType>
+                                </xs:element>
+                                <xs:element name="requisite" minOccurs="0" maxOccurs="unbounded">
+                                    <xs:complexType>
+                                        <xs:simpleContent>
+                                            <xs:extension base="xs:string">
+                                                <xs:attribute name="type" type="xs:string" use="required" />
+                                                <xs:attribute name="comment" type="xs:string" use="optional" />
+                                                <xs:attribute name="name" type="xs:string" use="optional" />
+                                            </xs:extension>
+                                        </xs:simpleContent>
+                                    </xs:complexType>
+                                </xs:element>
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="counters" minOccurs="1" maxOccurs="1">
+                        <xs:complexType>
+                            <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                                <xs:element ref="counter" />
+                            </xs:sequence>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="keywords" type="xs:string" />
+                    <xs:element name="type" type="xs:string" />
+                    <xs:element name="country" type="xs:string" />
+                </xs:choice>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:element name="counter" type="counterSimple" />
+    <xs:complexType name="counterSimple">
+        <xs:sequence minOccurs="0" maxOccurs="unbounded">
+            <xs:element ref="counter" minOccurs="0" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="id" type="xs:string" use="required" />
+        <xs:attribute name="name" type="xs:string" use="required" />
+        <xs:attribute name="type" type="counterType" use="optional" />
+        <xs:attribute name="units" type="xs:string" use="optional" />
+        <xs:attribute name="format" type="xs:string" use="optional" />
+        <xs:attribute name="prefix" type="xs:string" use="optional" />
+        <xs:attribute name="suffix" type="xs:string" use="optional" />
+        <xs:attribute name="flags" type="xs:string" use="optional" />
+    </xs:complexType>
+    <xs:complexType name="textOrHtml">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+                <xs:attribute name="html" type="xs:boolean" use="optional" />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    <xs:simpleType name="counterType" final="restriction">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="numeric" />
+            <xs:enumeration value="time" />
+            <xs:enumeration value="time_interval" />
+            <xs:enumeration value="text" />
+            <xs:enumeration value="html" />
+            <xs:enumeration value="bool" />
+            <xs:enumeration value="folder" />
+            <xs:enumeration value="array" />
+            <xs:enumeration value="entity_array" />
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>

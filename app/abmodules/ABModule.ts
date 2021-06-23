@@ -12,6 +12,10 @@ import log from "../../common/log";
 import shell from "shelljs";
 import ABModuleContext from "./ABModuleContext";
 import archiver from "archiver";
+import {Schema} from 'node-schematron';
+import appRoot from 'app-root-path';
+import xmllint from 'xmllint-wasm';
+import XSDVerifier from "./XSDVerifier";
 
 export type ABModuleRepositories = {
     [name: string] : string
@@ -58,6 +62,24 @@ async function checkFileExists(file: string) {
     return fs.access(file, fs.constants.F_OK)
         .then(() => true)
         .catch(() => false)
+}
+
+const Module_File_Verifier_XSD = 'xsd';
+const Module_File_Verifier_Schematron = 'schematron';
+
+const verifiers: {
+    [fileType: string]: {type: string, schema: string}[]
+} = {
+    [Module_File_Type_Manifest]: [
+        {type: Module_File_Verifier_XSD, schema: 'anybalance-manifest.xsd'},
+        {type: Module_File_Verifier_Schematron, schema: 'anybalance-manifest.sch'}
+    ],
+    [Module_File_Type_History]: [
+        {type: Module_File_Verifier_XSD, schema: 'history.xsd'},
+    ],
+    [Module_File_Type_Preferences]: [
+        {type: Module_File_Verifier_XSD, schema: 'preferences.xsd'},
+    ],
 }
 
 const criticalSection = new CriticalSection();
@@ -305,6 +327,46 @@ export default class ABModule{
         }
     }
 
+    private async verifyFiles() {
+        for(let file of this.files) {
+            const vfs = verifiers[file.type];
+            if (vfs) {
+                for (let vf of vfs) {
+                    switch (vf.type) {
+                        case Module_File_Verifier_XSD: {
+                            const xsdVerifier = new XSDVerifier();
+                            const result = await xsdVerifier.verify({
+                                xml: file.content as string || (file.content = await this.getFileText(file.name)),
+                                xsd: await fs.readFile(path.join(appRoot.path, 'res/xsd', vf.schema), 'utf-8'),
+                                xmlName: file.name
+                            });
+
+
+/*                            const result = await xmllint.validateXML({
+                                xml: [{
+                                    fileName: file.name,
+                                    contents: file.content as string || (file.content = await this.getFileText(file.name)),
+                                }],
+                                schema: await fs.readFile(path.join(appRoot.path, 'res/xsd', vf.schema), 'utf-8'),
+                            }); */
+                            if (!result.valid)
+                                throw new Error(this.getFilePath(file.name) + ' is invalid:\n' + result.rawOutput);
+                            break;
+                        }
+                        case Module_File_Verifier_Schematron: {
+                            const schema = Schema.fromString(await fs.readFile(path.join(appRoot.path, 'res/xsd', vf.schema), 'utf-8'))
+                            const results = schema.validateString(file.content as string || (file.content = await this.getFileText(file.name)),
+                                {debug: true});
+                            if (results.length)
+                                throw new Error(this.getFilePath(file.name) + ' is invalid:\n' + results.map(r => r.message).join('\n'));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private async loadModulesList(){
         let node = xpath.select1('//provider/depends', this.xmlManifest) as Element;
         if(node) {
@@ -341,9 +403,11 @@ export default class ABModule{
         try{
             await this.loadXmlManifest();
             await this.loadFilesList();
+            this.gen = this.getGen();
+            if(this.context.verifyFiles)
+                await this.verifyFiles();
             if(!skipModules)
                 await this.loadModulesList();
-            this.gen = this.getGen();
             this.isLoaded = true;
         }catch(e){
             this.isLoaded = false;
@@ -541,7 +605,7 @@ export default class ABModule{
         else if(!path.isAbsolute(output))
             output = path.join(process.cwd(), output);
 
-        const provider = await this.createFromPath(pth, version, new ABModuleContext({mainModulePath: pth, defaultVersion: version}));
+        const provider = await this.createFromPath(pth, version, new ABModuleContext({mainModulePath: pth, defaultVersion: version, verifyFiles: true}));
 
         const modules: {[id: string]: ABModule} = {}; //просто список используемых модулей
         const deps: ABModule[] = []; //Модули, от которых зависим.

@@ -30,6 +30,7 @@ const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/rele
         .alias('help', 'h')
         .command({
             command: 'serve',
+            aliases: ['s'],
             describe: 'Start the debugger helper server',
             handler: onServe
         })
@@ -61,6 +62,7 @@ const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/rele
         })
         .command({
             command: 'compile',
+            aliases: ['c'],
             handler: onCommand(onCompile),
             builder: yargs => {
                 return yargs
@@ -80,6 +82,7 @@ const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/rele
         })
         .command({
             command: 'increment',
+            aliases: ['i', 'inc'],
             handler: onCommand(onIncrementVersion),
             builder: yargs => {
                 return yargs
@@ -93,6 +96,7 @@ const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/rele
         })
         .command({
             command: 'update',
+            aliases: ['u'],
             handler: onCommand(onUpdate),
             describe: 'Updates this program to the latest version if any'
         })
@@ -101,8 +105,8 @@ const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/rele
 
     log.debug("Program finished");
 })().catch(e => {
-    log.fatal(e.message);
-    log.debug(e);
+    log.fatal("m" + e.message);
+    log.debug(e.stack);
 });
 
 async function onServe(argv: Arguments){
@@ -196,7 +200,7 @@ function onCommand(command: (argv: Arguments) => Promise<void>){
             await command.apply(null, [argv]);
         }catch(e){
             log.fatal(e.message);
-            log.debug(e);
+            log.debug(e.stack);
         }
     }
 }

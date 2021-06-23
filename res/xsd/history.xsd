@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!--Created with Liquid Studio 2021 (https://www.liquid-technologies.com)-->
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="history">
+        <xs:complexType>
+            <xs:sequence minOccurs="0">
+                <xs:element name="change" maxOccurs="unbounded">
+                    <xs:complexType>
+                        <xs:simpleContent>
+                            <xs:extension base="xs:string">
+                                <xs:attribute name="version" type="xs:nonNegativeInteger" use="required" />
+                                <xs:attribute name="date" use="required">
+                                    <xs:simpleType>
+                                        <xs:restriction base="xs:date">
+                                            <xs:pattern value="\d{4}-\d{2}-\d{2}" />
+                                        </xs:restriction>
+                                    </xs:simpleType>
+                                </xs:attribute>
+                                <xs:attribute name="major_version" type="xs:string" use="optional" />
+                            </xs:extension>
+                        </xs:simpleContent>
+                    </xs:complexType>
+                </xs:element>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+</xs:schema>

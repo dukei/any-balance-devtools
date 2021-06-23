@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- Created with Liquid Studio 2021 (https://www.liquid-technologies.com) -->
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="PreferenceScreen">
+        <xs:complexType mixed="true">
+            <xs:sequence minOccurs="1">
+                <xs:choice maxOccurs="unbounded">
+                    <xs:element name="EditTextPreference" maxOccurs="unbounded">
+                        <xs:complexType>
+                            <xs:simpleContent>
+                                <xs:extension base="empty">
+                                    <xs:attribute name="title" type="xs:string" use="required" />
+                                    <xs:attribute name="key" type="xs:string" use="required" />
+                                    <xs:attribute name="summary" type="xs:string" use="optional" />
+                                    <xs:attribute name="obligatory" type="xs:boolean" use="optional" />
+                                    <xs:attribute name="dialogTitle" type="xs:string" use="optional" />
+                                    <xs:attribute name="positiveButtonText" type="xs:string" use="optional" />
+                                    <xs:attribute name="negativeButtonText" type="xs:string" use="optional" />
+                                    <xs:attribute name="dialogMessage" type="xs:string" use="optional" />
+                                    <xs:attribute name="inputType" use="optional">
+                                        <xs:simpleType>
+                                            <xs:restriction base="xs:string">
+                                                <xs:enumeration value="text" />
+                                                <xs:enumeration value="number" />
+                                                <xs:enumeration value="textPassword" />
+                                                <xs:enumeration value="numberPassword" />
+                                                <xs:enumeration value="textEmailAddress" />
+                                            </xs:restriction>
+                                        </xs:simpleType>
+                                    </xs:attribute>
+                                    <xs:attribute name="defaultValue" type="xs:string" use="optional" />
+                                    <xs:attribute name="visible" type="xs:unsignedByte" use="optional" />
+                                    <xs:attribute name="maxLength" type="xs:unsignedByte" use="optional" />
+                                </xs:extension>
+                            </xs:simpleContent>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="ListPreference">
+                        <xs:complexType>
+                            <xs:simpleContent>
+                                <xs:extension base="empty">
+                                    <xs:attribute name="title" type="xs:string" use="required" />
+                                    <xs:attribute name="summary" type="xs:string" use="optional" />
+                                    <xs:attribute name="key" type="xs:string" use="required" />
+                                    <xs:attribute name="defaultValue" type="xs:string" use="optional" />
+                                    <xs:attribute name="entries" type="xs:string" use="required" />
+                                    <xs:attribute name="entryValues" type="xs:string" use="required" />
+                                    <xs:attribute name="dialogTitle" type="xs:string" use="optional" />
+                                    <xs:attribute name="obligatory" type="xs:boolean" use="optional" />
+                                </xs:extension>
+                            </xs:simpleContent>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element name="CheckBoxPreference">
+                        <xs:complexType>
+                            <xs:simpleContent>
+                                <xs:extension base="empty">
+                                    <xs:attribute name="title" type="xs:string" use="required" />
+                                    <xs:attribute name="defaultValue" type="xs:boolean" use="optional" />
+                                    <xs:attribute name="summaryOn" type="xs:string" use="optional" />
+                                    <xs:attribute name="summaryOff" type="xs:string" use="optional" />
+                                    <xs:attribute name="key" type="xs:string" use="required" />
+                                    <xs:attribute name="summary" type="xs:string" use="optional" />
+                                </xs:extension>
+                            </xs:simpleContent>
+                        </xs:complexType>
+                    </xs:element>
+                    <xs:element ref="PreferenceScreen" />
+                </xs:choice>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+    <xs:simpleType name="empty">
+        <xs:restriction base="xs:string">
+            <xs:whiteSpace value="collapse"/>
+            <xs:enumeration value=""/>
+            <xs:enumeration value=" "/>
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>

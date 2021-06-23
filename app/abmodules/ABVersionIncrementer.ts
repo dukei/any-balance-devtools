@@ -64,7 +64,8 @@ export default class ABVersionIncrementer{
             mainModulePath: pth,
             defaultVersion: Module_Version_Head,
             loadFileContent: true,
-            loadXmls: true
+            loadXmls: true,
+            verifyFiles: true
         }));
         this.m = m;
 
