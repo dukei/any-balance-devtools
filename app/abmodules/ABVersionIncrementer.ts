@@ -3,7 +3,7 @@ import ABModule, {
     Module_File_Manifest,
     Module_File_Type_History,
     Module_File_Type_JS, Module_File_Types_XML,
-    Module_Version_Head
+    Module_Version_Head, ModuleIdAndVersion
 } from "./ABModule";
 import ABModuleContext from "./ABModuleContext";
 import * as path from "path";
@@ -15,6 +15,7 @@ import * as util from "util";
 import shell from "shelljs";
 import Templater from "./Templater";
 import child_process from 'child_process';
+import * as xpath from 'fontoxpath';
 
 export type ABCmdTemplate = 'tortoiseGit'|'gitAdd'|'gitCommit';
 
@@ -53,6 +54,7 @@ export default class ABVersionIncrementer{
     private m!: ABModule;
     private mainJs?: string;
     private changeDescription!: string
+    private v!: ModuleIdAndVersion;
 
     constructor(pth: string) {
         this.pth = pth;
@@ -70,7 +72,7 @@ export default class ABVersionIncrementer{
         this.m = m;
 
         await m.load();
-        const v = m.getIdAndVersion();
+        const v = this.v = m.getIdAndVersion();
 
         if(path.basename(pth) !== v.id)
             throw new Error("Provider folder should be the same as provider id: " + v.id);
@@ -123,6 +125,12 @@ export default class ABVersionIncrementer{
         for(let f of xmls){
             if(!/^\uFEFF?</.test(f.content! as string))
                 throw new Error("Please remove leading spaces from " + f.name);
+
+            if(f.type === Module_File_Type_History){
+                let version = xpath.evaluateXPathToString('(/history/change[@version = max(/history/change/@version)]/@version)[1]', f.xmlDocument);
+                if(version && +version > this.v.version)
+                    throw new Error(`Version in history (${version}) is greater than the version of the provider (${this.v.version})!`);
+            }
         }
     }
 
@@ -161,7 +169,7 @@ export default class ABVersionIncrementer{
 
     public async writeProvider() {
         let manifest = await this.m.getFileText(Module_File_Manifest);
-        const v = this.m.getIdAndVersion();
+        const v = this.v;
 
         manifest = manifest.replace(/(<id[^>]+version=)"\d+"/, `$1"${v.version+1}"`);
 

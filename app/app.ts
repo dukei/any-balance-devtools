@@ -36,6 +36,7 @@ const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/rele
         })
         .command({
             command: 'pack',
+            aliases: ['p'],
             handler: onCommand(onAssemble),
             builder: yargs => {
                 return yargs

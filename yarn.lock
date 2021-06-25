@@ -1178,7 +1178,7 @@ flatted@^2.0.1:
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-2.0.2.tgz#4575b21e2bcee7434aa9be662f4b7b5f9c2b5138"
   integrity sha512-r5wGx7YeOwNWNlCA0wQ86zKyDLMQr+/RB8xy74M4hTphfmjlijTSSXGuH8rnvKZnfT9i+75zmd8jcKdMR4O6jA==
 
-fontoxpath@^3.14.2:
+fontoxpath@^3.14.2, fontoxpath@^3.18.1:
   version "3.18.1"
   resolved "https://registry.yarnpkg.com/fontoxpath/-/fontoxpath-3.18.1.tgz#e066b100516e8b1a1881a43709e0b58366961f4f"
   integrity sha512-UReXnsJ3K/dIKNmBT7U8+dFMYMGgI2RURlFPwncVqEmEfE5HJI9SPDvFDN72YJODSzhETDy5yCXjUMYbyv5Pmw==

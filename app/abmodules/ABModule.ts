@@ -14,7 +14,6 @@ import ABModuleContext from "./ABModuleContext";
 import archiver from "archiver";
 import {Schema} from 'node-schematron';
 import appRoot from 'app-root-path';
-import xmllint from 'xmllint-wasm';
 import XSDVerifier from "./XSDVerifier";
 
 export type ABModuleRepositories = {
@@ -34,6 +33,8 @@ export type ABModuleFile = {
 export interface ABModuleDiskFile extends ABModuleFile {
     path: string
 }
+
+export type ModuleIdAndVersion = { id: string, version: number, majorVersion?: string };
 
 export const Module_Repo_Default = 'default';
 export const Module_Repo_Self = '__self';
@@ -263,7 +264,7 @@ export default class ABModule{
         return +(gen?.textContent || 1);
     }
 
-    public getIdAndVersion(): { id: string, version: number, majorVersion?: string } {
+    public getIdAndVersion(): ModuleIdAndVersion {
         let node = xpath.select1('//provider/id', this.xmlManifest) as Element;
         if(!node)
             throw new Error(this.path + ' does not contain id node!');
@@ -482,7 +483,7 @@ export default class ABModule{
             const file = provider.files[i];
             if(file.type === Module_File_Type_JS && !/:/.test(file.name))
                 files.push(provider.getFilePath(file.name));
-            else
+            else if(file.type !== Module_File_Type_Manifest)
                 otherFiles.push(file);
         }
 

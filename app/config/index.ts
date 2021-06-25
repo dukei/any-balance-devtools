@@ -35,7 +35,7 @@ export class ConfigHelper {
 	}
 }
 
-let cfgBasePath: string = '.';
+let cfgBasePath: string = __dirname;
 const targetConfigName = "/config_" + ConfigHelper.getConfigTarget();
 
 if(isPkg) {

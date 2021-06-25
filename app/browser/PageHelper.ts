@@ -2,7 +2,7 @@ import {BrowserManager} from "./BrowserManager";
 import * as fs from "fs-extra";
 import * as path from "path";
 import config from "../config/config_development";
-import appRoot from 'app-root-path';
+import appRoot from '../../common/AppRoot';
 
 export interface CodeBaseOptions extends PageOptions{
     prompt?: string,
@@ -38,7 +38,7 @@ export class PageHelper {
         const page = await bm.newPage({
             headless: false,
             proxy: options.proxy,
-            userDataDir: config.browser.persistentProfile
+            userDataDir: path.resolve(appRoot.pathHome, config.browser.persistentProfile)
         });
 
         await page.setRequestInterception(true);
@@ -103,7 +103,7 @@ export class PageHelper {
         const page = await bm.newPage({
             headless: false,
             proxy: options?.proxy,
-            userDataDir: config.browser.persistentProfile
+            userDataDir: path.resolve(appRoot.pathHome, config.browser.persistentProfile)
         });
 
         await page.setRequestInterception(true);
