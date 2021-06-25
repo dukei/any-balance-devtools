@@ -181,7 +181,7 @@ async function onUpdate(argv: Arguments) {
 
         if (bPkg) {
             if (!success) {
-                await fs.rename(process.execPath, process.execPath + '.bak');
+                await fs.rename(process.execPath + '.bak', process.execPath);
             }
         }
 
