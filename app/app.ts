@@ -10,6 +10,7 @@ import ABVersionIncrementer from "./abmodules/ABVersionIncrementer";
 import * as path from "path";
 import appRoot from 'app-root-path';
 import * as fs from 'fs-extra';
+import ABBootstrapper from "./abmodules/ABBootstrapper";
 
 const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/releases/latest';
 
@@ -101,6 +102,20 @@ const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/rele
             handler: onCommand(onUpdate),
             describe: 'Updates this program to the latest version if any'
         })
+        .command({
+            command: 'bootstrap',
+            aliases: ['b'],
+            handler: onCommand(onBootstrap),
+            builder: yargs => {
+                return yargs
+                    .option('dir', {
+                        alias: 'd',
+                        describe: 'Path to provider base dir (current dir otherwise)',
+                        type: 'string'
+                    })
+            },
+            describe: 'Bootstraps provider or adds debugger files to an existing provider'
+        })
         .strict()
         .parse();
 
@@ -150,6 +165,15 @@ async function onIncrementVersion(argv: Arguments){
 
     const result = await new ABVersionIncrementer(source).incrementVersion();
     log.info("SUCCESS: Provider version has been incremented");
+}
+
+async function onBootstrap(argv: Arguments){
+    const source = (argv.dir as string && path.resolve(argv.dir as string)) || process.cwd();
+
+    log.info("About bootstrap " + source);
+
+    const result = await new ABBootstrapper(source).bootstrap();
+    log.info("SUCCESS: Provider has been bootstrapped");
 }
 
 async function onUpdate(argv: Arguments) {

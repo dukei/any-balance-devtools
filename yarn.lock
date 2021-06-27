@@ -1331,7 +1331,7 @@ getpass@^0.1.1:
 
 "git-auto-update@https://github.com/dukei/git-auto-update.git#master":
   version "1.4.1"
-  resolved "https://github.com/dukei/git-auto-update.git#d1b0ab704906ab5f571a863550d7742322adcdd6"
+  resolved "https://github.com/dukei/git-auto-update.git#ceeda2f59d04a494948187ef8d971f7ab6ec337d"
   dependencies:
     chalk "^2.4.2"
     fs-extra "^10.0.0"

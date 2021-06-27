@@ -47,9 +47,10 @@ export const Module_File_Type_Manifest = 'manifest';
 export const Module_File_Type_History = 'history';
 export const Module_Repo_Default_Dirname = 'modules';
 export const Module_File_Type_Preferences = 'preferences';
+export const Module_File_Type_Settings = 'settings';
 
-export const Module_File_Types_Text = [Module_File_Type_JS, Module_File_Type_Manifest, Module_File_Type_History, Module_File_Type_Preferences];
-export const Module_File_Types_XML = [Module_File_Type_Manifest, Module_File_Type_History, Module_File_Type_Preferences];
+export const Module_File_Types_Text = [Module_File_Type_JS, Module_File_Type_Manifest, Module_File_Type_History, Module_File_Type_Preferences, Module_File_Type_Settings];
+export const Module_File_Types_XML = [Module_File_Type_Manifest, Module_File_Type_History, Module_File_Type_Preferences, Module_File_Type_Settings];
 
 export enum ModuleType {
     PROVIDER= 1,
