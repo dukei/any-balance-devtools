@@ -1,4 +1,8 @@
-﻿// lib/app.ts
+﻿if((<any>process).pkg){
+    // Workaround 'pkg' bug: https://github.com/zeit/pkg/issues/420
+    require('../common/pkg-copyfile-patch');
+}
+
 import express from 'express';
 import config, {ConfigHelper} from './config';
 import log from "../common/log";

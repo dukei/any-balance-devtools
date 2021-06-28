@@ -3,7 +3,7 @@ import config from "../config";
 import { DOMParserImpl as dom} from 'xmldom-ts';
 import { DOMParserOptions } from "xmldom-ts/dist/types/parser/dom-parser";
 
-import * as xpath from 'xpath-ts';
+import xpath from 'fontoxpath';
 import * as fs from "fs-extra";
 import path from 'path';
 import CriticalSection from "../../common/CriticalSection";
@@ -111,11 +111,8 @@ export default class ABModule{
     }
 
     public get name(): string {
-        let node = xpath.select1('//provider/name', this.xmlManifest) as Element;
-        if(!node)
-            throw new Error(this.path + ' does not contain name node!');
-
-        return node.textContent?.trim() || '';
+        let name = xpath.evaluateXPathToString('/provider/name/text()', this.xmlManifest);
+        return name?.trim() || '';
     }
 
     private get xmlManifest(): Document {
@@ -180,11 +177,7 @@ export default class ABModule{
         const xml = await fs.readFile(pathManifest, "utf8")
         const doc = this.parseXML(pathManifest, xml);
 
-        const idNode = xpath.select1('//provider/id', doc) as Node;
-        if(!idNode)
-            throw new Error(dir + ' does not contain id node!');
-
-        const id = idNode.firstChild?.textContent?.trim();
+        const id = xpath.evaluateXPathToString('(/provider/id/text())[1]', doc);
         if(!id)
             throw new Error(dir + ' contains empty id node!');
 
@@ -260,15 +253,14 @@ export default class ABModule{
     }
 
     public getGen(): number {
-        const node = xpath.select1('//provider', this.xmlManifest) as Element;
-        const gen = node.attributes.getNamedItem("gen");
-        return +(gen?.textContent || 1);
+        const gen = xpath.evaluateXPathToString('/provider/@gen', this.xmlManifest);
+        return +(gen || 1);
     }
 
     public getIdAndVersion(): ModuleIdAndVersion {
-        let node = xpath.select1('//provider/id', this.xmlManifest) as Element;
-        if(!node)
-            throw new Error(this.path + ' does not contain id node!');
+        let node = xpath.evaluateXPath('/provider/id', this.xmlManifest) as Element;
+        if(!(node instanceof Element))
+            throw new Error(this.path + ' does not contain a single id node!');
 
         const attrs = node.attributes;
         return {
@@ -279,14 +271,14 @@ export default class ABModule{
     }
 
     private async loadFilesList(){
-        let node = xpath.select1('//provider/files', this.xmlManifest) as Element;
-        if(!node)
-            throw new Error(this.path + ' does not contain files node!');
+        const nodeFiles = xpath.evaluateXPath('/provider/files', this.xmlManifest) as Element;
+        if(!(nodeFiles instanceof Element))
+            throw new Error(this.path + ' does not contain a single files node!');
 
-        const nodeList = node.childNodes;
+        const nodeList = nodeFiles.childNodes;
         const files = this.files;
         for(let i=0; i<nodeList.length; ++i){
-            node = nodeList.item(i) as Element;
+            const node = nodeList.item(i) as Element;
             if(node.nodeType !== Node.ELEMENT_NODE) //NODE_ELEMENT
                 continue;
             const fname = node.textContent?.trim();
@@ -370,13 +362,12 @@ export default class ABModule{
     }
 
     private async loadModulesList(){
-        let node = xpath.select1('//provider/depends', this.xmlManifest) as Element;
-        if(node) {
-
-            var nodeList = node.childNodes;
-            var modules = this.depends;
-            for (var i = 0; i < nodeList.length; ++i) {
-                node = nodeList.item(i) as Element;
+        const nodeDepends = xpath.evaluateXPath('/provider/depends', this.xmlManifest);
+        if(!(nodeDepends as Element)) {
+            const nodeList = nodeDepends.childNodes;
+            const modules = this.depends;
+            for (let i = 0; i < nodeList.length; ++i) {
+                const node = nodeList.item(i) as Element;
                 if (node.nodeType != Node.ELEMENT_NODE) //NODE_ELEMENT
                     continue;
 

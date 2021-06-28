@@ -1,9 +1,5 @@
 import ABModule, {
-    ABModuleFile,
     Module_File_Manifest,
-    Module_File_Type_History,
-    Module_File_Type_JS, Module_File_Types_XML,
-    Module_Version_Head, ModuleIdAndVersion
 } from "./ABModule";
 import * as path from "path";
 import * as fs from "fs-extra";
@@ -20,6 +16,7 @@ export default class ABBootstrapper{
     }
 
     public async bootstrap(){
+        //@ts-ignore
         if(!await fs.pathExists(path.join(this.pth, Module_File_Manifest))){
             await this.bootstrapSource();
         }
