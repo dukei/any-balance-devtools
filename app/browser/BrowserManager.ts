@@ -1,6 +1,7 @@
 import puppeteer, {Browser, BrowserContext, BrowserFetcher, Page} from "puppeteer";
 import log from "../../common/log";
 import * as path from "path";
+import config from "../config";
 
 type SpecificBrowser = {
     key: string
@@ -47,8 +48,15 @@ export class BrowserManager {
                     )
                     : executablePath
             )
+
+            const _args: string[] = [];
+            if(args.proxy)
+                _args.push(`--proxy-server=${args.proxy}`);
+            if(config.browser.extraLaunchFlags?.length)
+                _args.push(...config.browser.extraLaunchFlags);
+
             const br = await puppeteer.launch({
-                args: args.proxy ? [ `--proxy-server=${args.proxy}` ] : undefined,
+                args: _args.length ? _args : undefined,
                 headless: headless,
                 userDataDir: args.userDataDir,
                 executablePath: chromiumExecutablePath
