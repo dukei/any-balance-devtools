@@ -52,27 +52,29 @@ export default class ABBootstrapper{
         }else{
             const prefsPth = path.join(this.pth, prefName);
             const prefs = ABModule.parseXML(prefsPth, await fs.readFile(prefsPth, 'utf-8'));
-            const nodes = xpath.evaluateXPath('//*[self::EditTextPreference or self::ListPreference or self::CheckBoxPreference]', prefs);
+            let _nodes = xpath.evaluateXPath('//*[self::EditTextPreference or self::ListPreference or self::CheckBoxPreference]', prefs);
+            if(_nodes) {
+                const nodes = _nodes instanceof Element ? [_nodes] : _nodes;
+                for (let node of nodes) {
+                    let e = node as Element;
+                    const prefStrings: string[] = [];
+                    prefStrings.push(JSON.stringify(e.attributes.getNamedItem("key")?.value || "?unknownKey"), ': ');
+                    let defValue: any = e.attributes.getNamedItem("defaultValue")?.value || "";
 
-            for(let node of nodes){
-                let e = node as Element;
-                const prefStrings: string[] = [];
-                prefStrings.push(JSON.stringify(e.attributes.getNamedItem("key")?.value || "?unknownKey"), ': ');
-                let defValue: any = e.attributes.getNamedItem("defaultValue")?.value || "";
-
-                prefsStrings.push('//' + e.attributes.getNamedItem("title")?.value);
-                switch(e.tagName)   {
-                    case "CheckBoxPreference":
-                        if(["1", "true"].indexOf(defValue.toLowerCase()) >= 0)
-                            defValue = false;
-                        break;
-                    case "ListPreference":
-                        prefsStrings.push('//Entries: ' + e.attributes.getNamedItem("entries")?.value);
-                        prefsStrings.push('//Values: ' + e.attributes.getNamedItem("entryValues")?.value);
-                        break;
+                    prefsStrings.push('//' + e.attributes.getNamedItem("title")?.value);
+                    switch (e.tagName) {
+                        case "CheckBoxPreference":
+                            if (["1", "true"].indexOf(defValue.toLowerCase()) >= 0)
+                                defValue = false;
+                            break;
+                        case "ListPreference":
+                            prefsStrings.push('//Entries: ' + e.attributes.getNamedItem("entries")?.value);
+                            prefsStrings.push('//Values: ' + e.attributes.getNamedItem("entryValues")?.value);
+                            break;
+                    }
+                    prefStrings.push(JSON.stringify(defValue), ',')
+                    prefsStrings.push(prefStrings.join(''));
                 }
-                prefStrings.push(JSON.stringify(defValue), ',')
-                prefsStrings.push(prefStrings.join(''));
             }
 
             let file = await fs.readFile(path.join(appRootBetter.path, 'res/bootstrap/debug/_debug-anybalance.html'), 'utf-8');

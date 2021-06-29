@@ -363,7 +363,7 @@ export default class ABModule{
 
     private async loadModulesList(){
         const nodeDepends = xpath.evaluateXPath('/provider/depends', this.xmlManifest);
-        if(!(nodeDepends as Element)) {
+        if(nodeDepends instanceof Element) {
             const nodeList = nodeDepends.childNodes;
             const modules = this.depends;
             for (let i = 0; i < nodeList.length; ++i) {
@@ -464,6 +464,9 @@ export default class ABModule{
         }else{
             provider = await basepathOrModule.createModule(basepathOrModule.id, basepathOrModule.repo, Module_Version_Source);
         }
+
+        if(provider.type !== ModuleType.MODULE)
+            throw new Error("Only modules can be compiled!");
 
         await provider.load(true);
 
@@ -596,7 +599,7 @@ export default class ABModule{
         if(!output)
             output = path.join(pth, 'provider.zip');
         else if(!path.isAbsolute(output))
-            output = path.join(process.cwd(), output);
+            output = path.resolve(output);
 
         const provider = await this.createFromPath(pth, version, new ABModuleContext({mainModulePath: pth, defaultVersion: version, verifyFiles: true}));
 
