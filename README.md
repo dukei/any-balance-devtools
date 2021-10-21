@@ -8,7 +8,7 @@ Development support tools for [AnyBalance](https://anybalance.ru), [AnyBalanceDe
 запросите в [Issues](https://github.com/dukei/any-balance-devtools/issues) или соберите самостоятельно из исходного кода. 
 
 ## Win64
-1. Загрузите последний [релиз](https://github.com/dukei/any-balance-devtools/issues)
+1. Загрузите последний [релиз](https://github.com/dukei/any-balance-devtools/releases)
 1. Распакуйте в какой-нибудь каталог, например, `C:\abd`
 1. Добавьте этот каталог в переменную окружения PATH
 1. Проверьте, что всё ок
