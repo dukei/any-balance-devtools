@@ -11,7 +11,7 @@ export default function(router: Router) {
         try {
             let api = new FileApi(req, res);
             await api.action('file');
-        }catch(e){
+        }catch(e: any){
             res.status(e.statusCode || 500).json({status: 'error', message: e.message});
             log.error("FileApi error: " + e.message + '\n' + e.stack);
         }

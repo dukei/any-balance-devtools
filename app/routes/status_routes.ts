@@ -11,7 +11,7 @@ export default function(router: Router) {
         try {
             let api = new StatusApi(req, res);
             await api.action(req.params.action);
-        }catch(e){
+        }catch(e: any){
             res.status(e.statusCode || 500).json({status: 'error', message: e.message});
             log.error("StatusApi error: " + e.message + '\n' + e.stack);
         }

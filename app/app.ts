@@ -227,7 +227,7 @@ function onCommand(command: (argv: Arguments) => Promise<void>){
     return async (argv: Arguments) => {
         try {
             await command.apply(null, [argv]);
-        }catch(e){
+        }catch(e: any){
             log.fatal(e.message);
             log.debug(e.stack);
         }

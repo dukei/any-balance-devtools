@@ -68,7 +68,7 @@ import {Schema} from 'node-schematron';
             {debug: true});
 
         console.log(result);
-    }catch(e){
+    }catch(e: any){
         log.error(e.message, e.stack);
     }
 })();

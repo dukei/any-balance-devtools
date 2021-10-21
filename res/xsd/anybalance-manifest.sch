@@ -20,7 +20,7 @@
             </assert>
         </rule>
         <rule context="/provider/author">
-            <assert test="matches(text(),'\w+[\w\s]*&lt;([0-9a-zA-Z]([-.\w]*[0-9a-zA-Z])*@([0-9a-zA-Z][-\w]*[0-9a-zA-Z]\.)+[a-zA-Z]{2,9})&gt;')">
+            <assert test="matches(text(),'\w+[\w\s]*&lt;([0-9a-zA-Z_]([-.\w]*[0-9a-zA-Z_])*@([0-9a-zA-Z][-\w]*[0-9a-zA-Z]\.)+[a-zA-Z]{2,9})&gt;')">
                 Wrong format for author <value-of select="."/> 
                 Example of the correct author format: Alex Spacer &lt;alex@email.org&gt;
             </assert>

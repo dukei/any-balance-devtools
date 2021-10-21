@@ -402,7 +402,7 @@ export default class ABModule{
             if(!skipModules)
                 await this.loadModulesList();
             this.isLoaded = true;
-        }catch(e){
+        }catch(e: any){
             this.isLoaded = false;
             this.errorMessage = e.message;
             e.message = 'Could not load module ' + this.getFullId() + ': ' + e.message;
@@ -486,7 +486,7 @@ export default class ABModule{
 
         try{
             await fs.emptyDir(version_path); //Удаляем старые файлы
-        }catch(e){
+        }catch(e: any){
             WScript.Echo("WARNING: trouble deleting old js files: " + e.message);
         }
 
@@ -515,7 +515,7 @@ export default class ABModule{
             try{
                 let stat = await fs.stat(pth);
                 time = stat.mtimeMs;
-            }catch(e){
+            }catch(e: any){
                 if(allowNotExists){
                     log.info('Problem getting file ' + pth + ': ' + e.message + ' -- assuming it is not built yet');
                 }else {
