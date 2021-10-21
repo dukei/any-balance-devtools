@@ -14,7 +14,8 @@ export type Config = {
     	leaveCaptchaWindowAfterSolution: boolean,
 		leaveRecaptchaV3: boolean,
 		leaveRecaptchaV2: boolean,
-		persistentProfile: string
+		persistentProfile: string,
+		extraLaunchFlags?: string[]
 	},
 	ab: {
     	modules: {

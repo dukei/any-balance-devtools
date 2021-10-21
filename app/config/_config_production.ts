@@ -17,7 +17,9 @@ const config: Config = {
 		//Don't automatically close recaptcha v2 tabs
 		leaveRecaptchaV2: false,
 		//Path to browser profile
-		persistentProfile: './profiles'
+		persistentProfile: './profiles',
+		//Uncomment this if chrome can not start in your environment
+		//extraLaunchFlags: ['--no-sandbox'],
 	},
 	ab: {
 		modules: {
