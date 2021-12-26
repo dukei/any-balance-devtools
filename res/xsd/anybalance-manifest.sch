@@ -14,7 +14,7 @@
                 only 'id', 'name' and 'type' attributes
             </assert>
         </rule>
-        <rule context="counter[@type=('numeric','time','time_interval','text','html','bool') or not(@type)]">
+        <rule context="counter[@type=('numeric','time','time_interval','text','html','bool','boolean') or not(@type)]">
             <assert test="not(counter)">
                 Simple counter id:<value-of select="@id" /> should not contain subcounters
             </assert>

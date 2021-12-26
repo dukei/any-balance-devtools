@@ -112,6 +112,7 @@
                     <xs:element name="country" type="xs:string" />
                 </xs:choice>
             </xs:sequence>
+	        <xs:attribute name="gen" type="xs:nonNegativeInteger" use="optional" />
         </xs:complexType>
     </xs:element>
     <xs:element name="counter" type="counterSimple" />
@@ -143,6 +144,7 @@
             <xs:enumeration value="text" />
             <xs:enumeration value="html" />
             <xs:enumeration value="bool" />
+            <xs:enumeration value="boolean" />
             <xs:enumeration value="folder" />
             <xs:enumeration value="array" />
             <xs:enumeration value="entity_array" />

@@ -21,6 +21,7 @@
                                         <xs:simpleType>
                                             <xs:restriction base="xs:string">
                                                 <xs:enumeration value="text" />
+                                                <xs:enumeration value="json" />
                                                 <xs:enumeration value="number" />
                                                 <xs:enumeration value="textPassword" />
                                                 <xs:enumeration value="numberPassword" />
@@ -31,6 +32,8 @@
                                     <xs:attribute name="defaultValue" type="xs:string" use="optional" />
                                     <xs:attribute name="visible" type="xs:unsignedByte" use="optional" />
                                     <xs:attribute name="maxLength" type="xs:unsignedByte" use="optional" />
+                                    <xs:attribute name="singleLine" type="xs:boolean" use="optional" />
+                                    <xs:attribute name="jsonSchema" type="xs:string" use="optional" />
                                 </xs:extension>
                             </xs:simpleContent>
                         </xs:complexType>
@@ -65,6 +68,7 @@
                             </xs:simpleContent>
                         </xs:complexType>
                     </xs:element>
+                    <xs:element name="script" type="xs:string" minOccurs="0" maxOccurs="1" />
                     <xs:element ref="PreferenceScreen" />
                 </xs:choice>
             </xs:sequence>
