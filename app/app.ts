@@ -97,6 +97,12 @@ const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/rele
                         describe: 'Path to provider base dir (current dir otherwise)',
                         type: 'string'
                     })
+                    .option('keep-version', {
+                        alias: 'k',
+                        default: false,
+                        describe: 'Do not increment version - keep it at current value. Just check dependencies and commit',
+                        type: 'boolean'
+                    })
             },
             describe: 'Increments version, updates changes history, compiles dependency and commits all changes for a provider'
         })
@@ -167,8 +173,8 @@ async function onIncrementVersion(argv: Arguments){
 
     log.info("About to increment version of " + source);
 
-    const result = await new ABVersionIncrementer(source).incrementVersion();
-    log.info("SUCCESS: Provider version has been incremented");
+    const result = await new ABVersionIncrementer(source).incrementVersion(argv.keepVersion as boolean);
+    log.info(`SUCCESS: Provider version has been ${argv.keepVersion ? 'kept' : 'incremented'}`);
 }
 
 async function onBootstrap(argv: Arguments){

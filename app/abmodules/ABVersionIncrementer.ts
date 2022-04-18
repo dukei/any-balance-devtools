@@ -60,7 +60,7 @@ export default class ABVersionIncrementer{
         this.pth = pth;
     }
 
-    public async incrementVersion(){
+    public async incrementVersion(keepVersion: boolean){
         const pth = this.pth;
         const m = await ABModule.createFromPath(pth, Module_Version_Head, new ABModuleContext({
             mainModulePath: pth,
@@ -79,11 +79,11 @@ export default class ABVersionIncrementer{
 
         await this.checkJsForStupidErrors();
         await this.checkXMLsForStupidErrors();
-        this.changeDescription = await PageHelper.getVersionDescription(((v.majorVersion && v.majorVersion + '.') || '') + (v.version + 1), v.id);
+        this.changeDescription = keepVersion ? 'Committing changes' : await PageHelper.getVersionDescription(((v.majorVersion && v.majorVersion + '.') || '') + (v.version + 1), v.id);
 
-        await this.writeProvider();
+        await this.writeProvider(keepVersion);
 
-        log.info("Provider version is incremented. Trying to commit changes...");
+        log.info(`Provider version is ${keepVersion ? 'kept at previous value' : 'incremented'}. Trying to commit changes...`);
 
         const commitDirs = await this.checkModulesIfAreCompiledAndCommitted();
         commitDirs.push(pth);
@@ -167,11 +167,14 @@ export default class ABVersionIncrementer{
         return pathsToCommit;
     }
 
-    public async writeProvider() {
+    public async writeProvider(keepVersion: boolean) {
         let manifest = await this.m.getFileText(Module_File_Manifest);
         const v = this.v;
+        const prevManifest = manifest;
 
-        manifest = manifest.replace(/(<id[^>]+version=)"\d+"/, `$1"${v.version+1}"`);
+        if(!keepVersion) {
+            manifest = manifest.replace(/(<id[^>]+version=)"\d+"/, `$1"${v.version + 1}"`);
+        }
 
         const rlp = readline.createInterface({
             terminal: true,
@@ -215,30 +218,33 @@ export default class ABVersionIncrementer{
                 }
             }
 
-            const historyFile = this.m.files.find(f => f.type === Module_File_Type_History);
-            let historyFileName: string = 'history.xml';
-            if (!historyFile) {
-                manifest = manifest.replace(/(\s*)<\/files>/i, '$1\t<history>' + historyFileName + '</history>$1</files>');
-            } else {
-                historyFileName = historyFile.name;
-            }
+            if(!keepVersion) {
+                const historyFile = this.m.files.find(f => f.type === Module_File_Type_History);
+                let historyFileName: string = 'history.xml';
+                if (!historyFile) {
+                    manifest = manifest.replace(/(\s*)<\/files>/i, '$1\t<history>' + historyFileName + '</history>$1</files>');
+                } else {
+                    historyFileName = historyFile.name;
+                }
 
-            await fs.writeFile(this.m.getFilePath(Module_File_Manifest), manifest);
-
-            let historyContent: string = '<?xml version="1.0" encoding="utf-8"?>\n\
+                let historyContent: string = '<?xml version="1.0" encoding="utf-8"?>\n\
 	<history>\n\
 	</history>';
 
-            if (historyFile)
-                historyContent = await this.m.getFileText(historyFile.name);
+                if (historyFile)
+                    historyContent = await this.m.getFileText(historyFile.name);
 
-            const dt = new Date();
-            const major_version_str = (v.majorVersion ? 'major_version="' + v.majorVersion + '" ' : '');
+                const dt = new Date();
+                const major_version_str = (v.majorVersion ? 'major_version="' + v.majorVersion + '" ' : '');
 
-            historyContent = historyContent.replace(/<history>/, '<history>\n\t<change ' + major_version_str + 'version="' + (v.version + 1) + '" date="' + dt.getFullYear() + '-' + addZeros(dt.getMonth() + 1) + '-' + addZeros(dt.getDate()) + '">\n\t' + this.changeDescription.replace(/\n/g, '\n\t') + '\n\t</change>');
-            historyContent = historyContent.replace(/^\s*|\s*$/g, '');
+                historyContent = historyContent.replace(/<history>/, '<history>\n\t<change ' + major_version_str + 'version="' + (v.version + 1) + '" date="' + dt.getFullYear() + '-' + addZeros(dt.getMonth() + 1) + '-' + addZeros(dt.getDate()) + '">\n\t' + this.changeDescription.replace(/\n/g, '\n\t') + '\n\t</change>');
+                historyContent = historyContent.replace(/^\s*|\s*$/g, '');
 
-            await fs.writeFile(this.m.getFilePath(historyFileName), historyContent);
+                await fs.writeFile(this.m.getFilePath(historyFileName), historyContent);
+            }
+
+            if(prevManifest !== manifest)
+                await fs.writeFile(this.m.getFilePath(Module_File_Manifest), manifest);
 
         }finally{
             rlp.close();

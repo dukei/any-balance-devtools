@@ -30,7 +30,8 @@
                                         </xs:simpleType>
                                     </xs:attribute>
                                     <xs:attribute name="defaultValue" type="xs:string" use="optional" />
-                                    <xs:attribute name="visible" type="xs:unsignedByte" use="optional" />
+                                    <xs:attribute name="visible" type="xs:boolean" use="optional" />
+                                    <xs:attribute name="enabled" type="xs:boolean" use="optional" />
                                     <xs:attribute name="maxLength" type="xs:unsignedByte" use="optional" />
                                     <xs:attribute name="singleLine" type="xs:boolean" use="optional" />
                                     <xs:attribute name="jsonSchema" type="xs:string" use="optional" />
@@ -49,6 +50,8 @@
                                     <xs:attribute name="entries" type="xs:string" use="required" />
                                     <xs:attribute name="entryValues" type="xs:string" use="required" />
                                     <xs:attribute name="dialogTitle" type="xs:string" use="optional" />
+                                    <xs:attribute name="visible" type="xs:boolean" use="optional" />
+                                    <xs:attribute name="enabled" type="xs:boolean" use="optional" />
                                     <xs:attribute name="obligatory" type="xs:boolean" use="optional" />
                                 </xs:extension>
                             </xs:simpleContent>
@@ -62,6 +65,8 @@
                                     <xs:attribute name="defaultValue" type="xs:boolean" use="optional" />
                                     <xs:attribute name="summaryOn" type="xs:string" use="optional" />
                                     <xs:attribute name="summaryOff" type="xs:string" use="optional" />
+                                    <xs:attribute name="visible" type="xs:boolean" use="optional" />
+                                    <xs:attribute name="enabled" type="xs:boolean" use="optional" />
                                     <xs:attribute name="key" type="xs:string" use="required" />
                                     <xs:attribute name="summary" type="xs:string" use="optional" />
                                 </xs:extension>
