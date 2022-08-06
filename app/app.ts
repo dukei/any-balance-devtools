@@ -19,17 +19,14 @@ import ABBootstrapper from "./abmodules/ABBootstrapper";
 const urlRelease = 'https://api.github.com/repos/dukei/any-balance-devtools/releases/latest';
 
 (async () => {
+    log.info("AnyBalanceDevtools v" + getVersion());
     log.debug(`Starting configuration (${__filename}, ${ConfigHelper.getConfigTarget()})`);
-
     if(process.argv.indexOf('update') < 0)
         checkForUpdate().catch(e => log.warn(e.message));
 
-    const pkg = require(path.join(appRoot.path, 'package.json'));
-
     await yargs(hideBin(process.argv))
         .usage("Usage: $0 [command] [--help] [..--options]")
-        .version("AnyBalanceDevtools v" + pkg.version)
-        .alias('version', 'v')
+        .version("AnyBalanceDevtools v" + getVersion())
         .help()
         .demandCommand(1, '')
         .alias('help', 'h')
@@ -240,17 +237,21 @@ function onCommand(command: (argv: Arguments) => Promise<void>){
     }
 }
 
+function getVersion(): string {
+    const pkg = require(path.join(appRoot.path, 'package.json'));
+    return pkg.version;
+}
+
 async function checkForUpdate(){
     const bPkg = !!(<any>process).pkg;
     if(bPkg) //Удаляем старый бэкап
         await fs.remove(process.execPath + '.bak');
 
-    const pkg = require(path.join(appRoot.path, 'package.json'));
     const updater = require('git-auto-update');
     const needUpdate = await updater.check({
         url: urlRelease,
         output: true,
-        version: 'v'+pkg.version
+        version: 'v'+getVersion()
     });
     if(needUpdate){
         log.warn("New version of AnyBalanceDevtools is available. Please run 'abd update'");

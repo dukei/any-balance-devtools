@@ -1,7 +1,9 @@
-import puppeteer, {Browser, BrowserContext, BrowserFetcher, Page} from "puppeteer";
+import puppeteer from "puppeteer-extra";
+import {Browser, BrowserContext, BrowserFetcher, Page} from "puppeteer";
 import log from "../../common/log";
 import * as path from "path";
 import config from "../config";
+import StealthPlugin from "puppeteer-extra-plugin-stealth"
 
 type SpecificBrowser = {
     key: string
@@ -22,7 +24,7 @@ export class BrowserManager {
     private browsers: {[key: string]: SpecificBrowser} = {};
 
     private constructor(){
-
+        puppeteer.use(StealthPlugin());
     }
 
     public static getInstance(): BrowserManager{
@@ -56,7 +58,7 @@ export class BrowserManager {
                 _args.push(...config.browser.extraLaunchFlags);
 
             const br = await puppeteer.launch({
-                args: _args.length ? _args : undefined,
+                args: _args.length ? _args : [],
                 headless: headless,
                 userDataDir: args.userDataDir,
                 executablePath: chromiumExecutablePath
@@ -83,7 +85,7 @@ export class BrowserManager {
         }
 
         const page = await context.newPage();
-        await this.preparePage(page);
+        await this.preparePage(page, args);
         await page.setDefaultNavigationTimeout(180000);
 
         ++b.pages;
@@ -102,62 +104,11 @@ export class BrowserManager {
         return page;
     }
 
-    private async preparePage(page: Page){
+    private async preparePage(page: Page, args: BrowserArgs){
         // This is where we'll put the code to get around the tests.
         // Pass the User-Agent Test.
-        const userAgent = 'Mozilla/5.0 (X11; Linux x86_64)' +
+        const userAgent = args.userAgent || 'Mozilla/5.0 (X11; Linux x86_64)' +
             'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.39 Safari/537.36';
         await page.setUserAgent(userAgent);
-
-        // Pass the Webdriver Test.
-        await page.evaluateOnNewDocument(() => {
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => false,
-            });
-        });
-
-        // Pass the Chrome Test.
-        await page.evaluateOnNewDocument(() => {
-            // We can mock this in as much depth as we need for the test.
-            //@ts-ignore
-            window.chrome = {
-                runtime: {},
-                // etc.
-            };
-        });
-
-        // Pass the Permissions Test.
-        await page.evaluateOnNewDocument(() => {
-            const originalQuery = window.navigator.permissions.query;
-            //@ts-ignore
-            return window.navigator.permissions.query = (parameters) => (
-                parameters.name === 'notifications' ?
-                    Promise.resolve({ state: Notification.permission }) :
-                    originalQuery(parameters)
-            );
-        });
-
-        // Pass the Plugins Length Test.
-        await page.evaluateOnNewDocument(() => {
-            // Overwrite the `plugins` property to use a custom getter.
-            Object.defineProperty(navigator, 'plugins', {
-                // This just needs to have `length > 0` for the current test,
-                // but we could mock the plugins too if necessary.
-                get: () => [1, 2, 3, 4, 5],
-            });
-        });
-
-        // Pass the Languages Test.
-        await page.evaluateOnNewDocument(() => {
-            // Overwrite the `plugins` property to use a custom getter.
-            Object.defineProperty(navigator, 'languages', {
-                get: () => ['en-US', 'en'],
-            });
-        });
-
-        await page.on('console', msg => {
-            const url = page.url();
-            log.info('page console (' + url + '): ' + msg.text());
-        });
     }
 }

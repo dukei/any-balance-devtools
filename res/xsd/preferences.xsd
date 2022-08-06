@@ -21,9 +21,16 @@
                                         <xs:simpleType>
                                             <xs:restriction base="xs:string">
                                                 <xs:enumeration value="text" />
+                                                <xs:enumeration value="phone" />
+                                                <xs:enumeration value="date" />
+                                                <xs:enumeration value="time" />
+                                                <xs:enumeration value="datetime" />
                                                 <xs:enumeration value="json" />
                                                 <xs:enumeration value="number" />
+                                                <xs:enumeration value="numberDecimal" />
+                                                <xs:enumeration value="numberSigned" />
                                                 <xs:enumeration value="textPassword" />
+                                                <xs:enumeration value="textUri" />
                                                 <xs:enumeration value="numberPassword" />
                                                 <xs:enumeration value="textEmailAddress" />
                                             </xs:restriction>

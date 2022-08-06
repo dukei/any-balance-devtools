@@ -53,20 +53,42 @@ export default class CaptchaApi{
         };
         CaptchaApi.handles[handle] = info;
 
+        if(b.USERAGENT && typeof(b.USERAGENT) !== 'string')
+            throw new Error(`USERAGENT should be string, ${typeof(b.USERAGENT)} given: ${b.USERAGENT}`);
+        if(!b.SITEKEY)
+            throw new Error("SITEKEY is required!");
+        if(b.SITEKEY === 'undefined')
+            throw new Error("SITEKEY is undefined!");
+        if(!b.URL)
+            throw new Error("URL is required!");
+        if(typeof (b.URL) !== 'string')
+            throw new Error(`URL should be string, ${typeof (b.URL)} given: ${b.URL}`);
+        if(!/^https?:\/\//.test(b.URL))
+            throw new Error(`URL should be absolute, starting from http(s)://, given: ${b.URL}`);
+        if(b.TIMELIMIT) {
+            if(typeof(b.TIMELIMIT) === 'string' && !/^[0-9]+$/.test(b.TIMELIMIT))
+                throw new Error(`TIMELIMIT should be number, ${typeof (b.TIMELIMIT)} given: ${b.TIMELIMIT}`);
+            if(typeof(b.TIMELIMIT) !== 'string' && typeof(b.TIMELIMIT) !== 'number')
+                throw new Error(`TIMELIMIT should be number, ${typeof (b.TIMELIMIT)} given: ${b.TIMELIMIT}`);
+        }
+        if(b.ACTION && typeof(b.ACTION) !== 'string')
+            throw new Error(`ACTION should be string, ${typeof(b.ACTION)} given: ${b.ACTION}`);
+
         const promise = PageHelper.solveRecaptchaEx({
-            userAgent: b.USERAGENT,
+            userAgent: b.USERAGENT || undefined,
             url: b.URL,
             sitekey: b.SITEKEY,
-            prompt: b.TEXT,
-            timeLimit: b.TIMELIMIT,
-            action: b.ACTION
+            prompt: b.TEXT || undefined,
+            timeLimit: b.TIMELIMIT || undefined,
+            action: b.ACTION || undefined
         }, b.TYPE || 'v3');
 
         promise.then(result => {
             info.progress = CaptchaStatus.READY;
             info.result = result;
             info.updatedAt = +new Date();
-        }).catch(e => {
+        }).catch((e: any) => {
+            log.error(e);
             if(e.message === 'timeout')
                 info.progress = CaptchaStatus.TIMEOUT;
             else if(e.message === 'cancel')
