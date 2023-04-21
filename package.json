@@ -1,6 +1,6 @@
 {
   "name": "any-balance-devtools",
-  "version": "1.3.0",
+  "version": "1.3.2",
   "main": "./build/app/app.js",
   "bin": "./build/app/app.js",
   "license": "MIT",

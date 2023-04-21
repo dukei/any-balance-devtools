@@ -58,7 +58,9 @@
                                     <xs:attribute name="entryValues" type="xs:string" use="required" />
                                     <xs:attribute name="dialogTitle" type="xs:string" use="optional" />
                                     <xs:attribute name="visible" type="xs:boolean" use="optional" />
+                                    <xs:attribute name="multiple" type="xs:boolean" use="optional" />
                                     <xs:attribute name="enabled" type="xs:boolean" use="optional" />
+                                    <xs:attribute name="order" type="xs:boolean" use="optional" />
                                     <xs:attribute name="obligatory" type="xs:boolean" use="optional" />
                                 </xs:extension>
                             </xs:simpleContent>

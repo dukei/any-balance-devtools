@@ -270,7 +270,7 @@ export default class ABModule{
         }
     }
 
-    private async loadFilesList(){
+    private async loadFilesList(allowMissingFiles?: boolean){
         const nodeFiles = xpath.evaluateXPath('/provider/files', this.xmlManifest) as Element;
         if(!(nodeFiles instanceof Element))
             throw new Error(this.path + ' does not contain a single files node!');
@@ -300,10 +300,17 @@ export default class ABModule{
             }
 
             if(this.context.loadFileContent){
-                if(Module_File_Types_Text.indexOf(file.type) >= 0)
-                    file.content = await this.getFileText(file.name);
-                else
-                    file.content = await fs.readFile(this.getFilePath(file.name));
+                try {
+                    if (Module_File_Types_Text.indexOf(file.type) >= 0)
+                        file.content = await this.getFileText(file.name);
+                    else
+                        file.content = await fs.readFile(this.getFilePath(file.name));
+                }catch(e: any){
+                    log.warn(`Error opening file (${file.type}) ${this.getFilePath(file.name)}`, e);
+                    file.content = undefined;
+                    if(!allowMissingFiles)
+                        throw e;
+                }
             }
 
             if(this.context.loadXmls){
@@ -389,13 +396,13 @@ export default class ABModule{
         return this.context.createModule(id, repo, version);
     }
 
-    public async load(skipModules?: boolean){
+    public async load(skipModules?: boolean, allowMissingFiles?: boolean){
         if(this.isLoaded)
             return; //Уже загружен
 
         try{
             await this.loadXmlManifest();
-            await this.loadFilesList();
+            await this.loadFilesList(allowMissingFiles);
             this.gen = this.getGen();
             if(this.context.verifyFiles)
                 await this.verifyFiles();
@@ -592,24 +599,18 @@ export default class ABModule{
         return sibpath && path.dirname(sibpath);
     }
 
-    public static async assemble(pth: string, output?: string, version?: string): Promise<string>{
-        log.info("Assembling " + pth);
-        if(!version)
-            version = Module_Version_Default;
-        if(!output)
-            output = path.join(pth, 'provider.zip');
-        else if(!path.isAbsolute(output))
-            output = path.resolve(output);
-
-        const provider = await this.createFromPath(pth, version, new ABModuleContext({mainModulePath: pth, defaultVersion: version, verifyFiles: true}));
-
+    /**
+     * Получает список JS файлов, от которых данный модуль зависит
+     * А также список собственных файлов, если skipRoot не true
+     * @param skipRoot
+     */
+    public async getModulesFilesList(skipRoot?: boolean): Promise<ABModuleDiskFile[]>{
         const modules: {[id: string]: ABModule} = {}; //просто список используемых модулей
         const deps: ABModule[] = []; //Модули, от которых зависим.
 
-        log.trace('Traversing dependencies...');
         const modulesFound: string[] = [];
 
-        await ABModule.traverseDependencies(provider, undefined, async m => {
+        await ABModule.traverseDependencies(this, undefined, async m => {
                 const id = m.getFullId();
                 if(modules[id])
                     return;
@@ -626,7 +627,9 @@ export default class ABModule{
         log.trace('Listing files...');
         for(let i=0; i<deps.length; ++i){
             const m = deps[i];
-            const root = m === provider;
+            const root = m === this;
+            if(root && skipRoot)
+                continue;
             for(let j=0; j<m.files.length; ++j){
                 const file = m.files[j];
                 if(root || file.type === Module_File_Type_JS){
@@ -640,6 +643,24 @@ export default class ABModule{
                 }
             }
         }
+
+        return files;
+    }
+
+    public static async assemble(pth: string, output?: string, version?: string): Promise<string>{
+        log.info("Assembling " + pth);
+        if(!version)
+            version = Module_Version_Default;
+        if(!output)
+            output = path.join(pth, 'provider.zip');
+        else if(!path.isAbsolute(output))
+            output = path.resolve(output);
+
+        const provider = await this.createFromPath(pth, version, new ABModuleContext({mainModulePath: pth, defaultVersion: version, verifyFiles: true}));
+
+        log.trace('Traversing dependencies...');
+
+        const files = await provider.getModulesFilesList();
 
         log.trace('Copying files...');
 

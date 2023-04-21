@@ -1,4 +1,5 @@
 import ABModule, {
+    ABModuleDiskFile,
     ABModuleFile,
     Module_File_Manifest,
     Module_File_Type_History,
@@ -71,17 +72,42 @@ export default class ABVersionIncrementer{
         }));
         this.m = m;
 
-        await m.load();
+        await m.load(undefined, keepVersion);
         const v = this.v = m.getIdAndVersion();
 
         if(path.basename(pth) !== v.id)
             throw new Error("Provider folder should be the same as provider id: " + v.id);
 
+        const absentFiles = m.files.filter(f => !f.content);
+        if(absentFiles.length){
+            if(!keepVersion)
+                throw new Error(`Files declared in manifest do not exist in provider dir: ${absentFiles.map(f => f.name).join(', ')}!`);
+            //Часть файлов отсутствует. Проверим, может быть это файлы из модулей
+            const moduleFiles = await m.getModulesFilesList(true);
+            const reallyAbsentFiles = absentFiles.filter(af => !moduleFiles.find(mf => mf.name === af.name));
+            if(reallyAbsentFiles.length)
+                throw new Error(`Files declared in manifest do not exist in modules or in provider dir: ${absentFiles.map(f => f.name).join(', ')}!`);
+        }
+
         await this.checkJsForStupidErrors();
         await this.checkXMLsForStupidErrors();
-        this.changeDescription = keepVersion ? 'Committing changes' : await PageHelper.getVersionDescription(((v.majorVersion && v.majorVersion + '.') || '') + (v.version + 1), v.id);
 
-        await this.writeProvider(keepVersion);
+        this.changeDescription = 'Committing changes';
+        if(keepVersion){
+            const historyFile = m.files.find(f => f.type === Module_File_Type_History);
+            if(historyFile){
+                const history = await m.getFileText(historyFile.name);
+                const record = /<change[^>]+version\s*=\s*"([^"]*)[^>]*>([\s\S]*?)<\/change>/i.exec(history);
+                if(record)
+                    this.changeDescription = `v.${record[1]}: ${record[2]}`;
+            }
+        }else{
+            this.changeDescription = await PageHelper.getVersionDescription(((v.majorVersion && v.majorVersion + '.') || '') + (v.version + 1), v.id);
+        }
+
+        await this.writeProvider(keepVersion, absentFiles);
+        if(absentFiles.length)
+            log.info(`Files has been removed from manifest: ${absentFiles.map(af => af.name).join(', ')}`);
 
         log.info(`Provider version is ${keepVersion ? 'kept at previous value' : 'incremented'}. Trying to commit changes...`);
 
@@ -167,13 +193,17 @@ export default class ABVersionIncrementer{
         return pathsToCommit;
     }
 
-    public async writeProvider(keepVersion: boolean) {
+    public async writeProvider(keepVersion: boolean, absentFiles: ABModuleFile[]) {
         let manifest = await this.m.getFileText(Module_File_Manifest);
         const v = this.v;
         const prevManifest = manifest;
 
         if(!keepVersion) {
             manifest = manifest.replace(/(<id[^>]+version=)"\d+"/, `$1"${v.version + 1}"`);
+        }
+
+        for(let af of absentFiles){
+            manifest = manifest.replace(new RegExp(`<js[^>]*>\\s*${af.name.replace(/\./g, '\\.')}\\s*<\\/js>\\s*`, 'i'), '');
         }
 
         const rlp = readline.createInterface({
