@@ -12,7 +12,6 @@ import * as fs from "fs-extra";
 import log from "../../common/log";
 import {PageHelper} from "../browser/PageHelper";
 import readline from 'readline';
-import * as util from "util";
 import shell from "shelljs";
 import Templater from "./Templater";
 import child_process from 'child_process';
@@ -213,12 +212,15 @@ export default class ABVersionIncrementer{
         });
 
         try {
-            const question = util.promisify(rlp.question.bind(rlp));
+            const question = (prompt: string) => new Promise((resolve, reject) => {
+                rlp.question(prompt, input => resolve(input));
+            });
 
             if (!/jquery/i.test(manifest) && !/no_browser/.test(manifest)) {
                 const answer: string = <string><unknown>await question('You do not use jquery in your provider! To improve compatibility you must add "no_browser" flag.\nDo you want to do this (Y/n)?');
-                if (!answer || answer.toLowerCase()[0] === 'y') {
-                    var apiFlags = searchRegExpSafe(/<api[^>]*flags\s*=\s*"([^"]+)/i, manifest);
+                console.log('answer is: ', answer)
+                if (answer?.toLowerCase()?.[0] === 'y') {
+                    const apiFlags = searchRegExpSafe(/<api[^>]*flags\s*=\s*"([^"]+)/i, manifest);
                     // already has some flags
                     if (apiFlags) {
                         manifest = manifest.replace(/flags\s*=\s*"([^"]+)"/, 'flags="no_browser|$1"');
