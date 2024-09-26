@@ -1513,8 +1513,8 @@ getpass@^0.1.1:
     assert-plus "^1.0.0"
 
 "git-auto-update@https://github.com/dukei/git-auto-update.git#master":
-  version "1.4.1"
-  resolved "https://github.com/dukei/git-auto-update.git#ceeda2f59d04a494948187ef8d971f7ab6ec337d"
+  version "1.4.2"
+  resolved "https://github.com/dukei/git-auto-update.git#5315d07b8c2397c81a7a4feaa153067890f90c1c"
   dependencies:
     chalk "^2.4.2"
     fs-extra "^10.0.0"
