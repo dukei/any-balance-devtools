@@ -48,7 +48,7 @@ export default class ABBootstrapper{
         const prefName = xpath.evaluateXPathToString('/provider/files/preferences/text()', manifest)?.trim();
         if(!prefName){
             log.warn("Preferences file is not found, bootstrapping default properties");
-            await fs.copy(path.join(appRootBetter.path, 'res/bootstrap/debug/_debug-anybalance.html'), this.pth);
+            await fs.copy(path.join(appRootBetter.path, 'res/bootstrap/debug/_debug-anybalance.html'), path.join(this.pth, '_debug-anybalance.html'));
         }else{
             const prefsPth = path.join(this.pth, prefName);
             const prefs = ABModule.parseXML(prefsPth, await fs.readFile(prefsPth, 'utf-8'));
